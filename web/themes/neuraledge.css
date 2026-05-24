@@ -1,0 +1,100 @@
+/*
+ * NeuralEDGE dashboard theme overlay.
+ *
+ * Loaded when ~/.hermes/config.yaml has `dashboard.theme: neuraledge`.
+ * Values mirror neuraledge/branding/theme.toml — keep them in sync.
+ *
+ * This file is the single intentional addition to the upstream `web/` tree.
+ * No component restructuring; tokens only. Survives upstream UI changes.
+ */
+
+:root,
+[data-theme="neuraledge"] {
+  /* Brand palette */
+  --ne-navy:   #132F48;
+  --ne-teal:   #13C5B3;
+  --ne-ice:    #EFF4F9;
+  --ne-slate:  #4C5A6A;
+  --ne-ink:    #0A1722;
+  --ne-mist:   #9AA8B6;
+  --ne-signal: #13C5B3;
+  --ne-warn:   #E0A422;
+  --ne-danger: #D14545;
+
+  /* Semantic — map Hermes generic tokens to brand. Add aliases here when
+     upstream introduces new token names; never touch the upstream CSS files. */
+  --color-bg:           var(--ne-navy);
+  --color-bg-alt:       #0E2538;
+  --color-surface:      #1B3B58;
+  --color-surface-alt:  #214765;
+  --color-fg:           var(--ne-ice);
+  --color-fg-muted:     var(--ne-mist);
+  --color-fg-strong:    #FFFFFF;
+  --color-accent:       var(--ne-teal);
+  --color-accent-fg:    var(--ne-ink);
+  --color-border:       var(--ne-slate);
+  --color-border-soft:  rgba(154, 168, 182, 0.18);
+  --color-success:      var(--ne-signal);
+  --color-warning:      var(--ne-warn);
+  --color-danger:       var(--ne-danger);
+  --color-link:         var(--ne-teal);
+  --color-link-hover:   #4FE3D2;
+
+  /* Typography */
+  --font-sans:  "Space Grotesk", system-ui, -apple-system, sans-serif;
+  --font-body:  "DM Sans", system-ui, sans-serif;
+  --font-mono:  "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* Spacing / radii / shadows */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow-soft:  0 4px 24px rgba(10, 23, 34, 0.35);
+  --shadow-glow:  0 0 0 1px rgba(19, 197, 179, 0.35), 0 8px 32px rgba(19, 197, 179, 0.12);
+}
+
+/* Light surface variant — when a panel needs the ice canvas. */
+[data-surface="ice"] {
+  --color-bg:        var(--ne-ice);
+  --color-bg-alt:    #FFFFFF;
+  --color-surface:   #FFFFFF;
+  --color-fg:        var(--ne-ink);
+  --color-fg-muted:  var(--ne-slate);
+  --color-fg-strong: #000000;
+  --color-border:    rgba(76, 90, 106, 0.16);
+  --color-border-soft: rgba(76, 90, 106, 0.08);
+}
+
+/* Base body styling — only sets vars; never restructures layout. */
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-body);
+}
+
+/* Headings + brand wordmark */
+h1, h2, h3, h4, .ne-wordmark {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+/* Mono surfaces (code, logs, transcript). */
+code, pre, kbd, samp, .ne-mono {
+  font-family: var(--font-mono);
+}
+
+/* Accent emphases used by the status bar / online dot. */
+.ne-accent { color: var(--color-accent); }
+.ne-success { color: var(--color-success); }
+.ne-warning { color: var(--color-warning); }
+.ne-danger  { color: var(--color-danger); }
+
+/* CORTEX-PALACE degraded indicator helper. */
+.ne-tier2-degraded::before {
+  content: "● ";
+  color: var(--color-warning);
+}
+.ne-tier2-ok::before {
+  content: "● ";
+  color: var(--color-success);
+}

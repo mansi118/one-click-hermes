@@ -1,0 +1,45 @@
+# NeuralEDGE string overrides
+# The branding plugin loads this and replaces upstream-string-id → NeuralEDGE value.
+# Keys here MUST match the string ids used by the Hermes string registry.
+# Unknown keys are ignored (forwards-compatible with upstream renames).
+
+[product]
+name            = "NeuralEDGE Agent"
+short_name      = "Neural"
+tagline         = "Run your business on signal, not chaos."
+description     = "A self-hosted executive AI assistant powered by NeuralEDGE."
+version_label   = "NeuralEDGE Neural"
+
+[organization]
+company         = "NeuralEDGE"
+website         = "https://neuraledge.in"
+support_url     = "https://neuraledge.in/support"
+docs_url        = "https://neuraledge.in/docs/neural"
+matrix_handle   = "matrix.neuraledge.in"
+n8n_handle      = "n8n.neuraledge.in"
+
+[cli]
+prompt          = "neural"
+prompt_symbol   = "▸"
+welcome         = "Neural is online. Type a request, or '/help' for commands."
+goodbye         = "Neural standing by. /exit"
+help_footer     = "Neural · NeuralEDGE Agent · /help · /skills · /memory · /cortex"
+setup_intro     = "Welcome to NeuralEDGE Agent setup. This takes about 3 minutes."
+
+[gateway]
+telegram_paired = "Telegram paired. Operator can now message Neural directly."
+telegram_unpaired = "Telegram not paired. Run setup or paste BOT_TOKEN into ~/.hermes/.env."
+
+[dashboard]
+title           = "NeuralEDGE Agent — Neural"
+subtitle        = "Executive AI Assistant"
+empty_state     = "No active session. Send Neural a message from Telegram or CLI to begin."
+
+[memory]
+tier1_label     = "Working memory"
+tier2_label     = "CORTEX-PALACE (long-term)"
+tier2_degraded  = "Long-term memory unavailable. Operating on working memory only."
+
+[errors]
+provider_down   = "LLM provider unreachable. Trying fallback."
+cortex_down     = "CORTEX-PALACE bridge degraded. Continuing on local memory."

@@ -1,0 +1,103 @@
+# docker-compose.neuraledge.yml — 2-service NeuralEDGE Agent stack.
+#
+# Services:
+#   hermes      — the branded agent (gateway + dashboard + agent loop)
+#   cortex-mcp  — the CORTEX-PALACE MCP bridge
+#
+# Both share the private bridge network `hermes-net`. Only `hermes`
+# publishes ports, and only to 127.0.0.1 — dashboard access is via SSH tunnel.
+#
+# Volumes:
+#   - ~/.hermes mounted into hermes at /opt/data — single source of operator state.
+#
+# Env: read from ~/.hermes/.env (created by the installer from .env.template).
+
+name: neuraledge
+
+networks:
+  hermes-net:
+    driver: bridge
+
+services:
+  # ──────────────────────────────────────────────────────────────────
+  # NeuralEDGE base image build (no service; just a buildable target).
+  # Compose builds it once and reuses for the hermes service below.
+  # ──────────────────────────────────────────────────────────────────
+
+  hermes:
+    image: neuraledge/hermes-neuraledge:latest
+    container_name: neural
+    build:
+      context: .
+      dockerfile: Dockerfile.neuraledge
+      args:
+        # When `hermes-agent:base` isn't pre-built, compose can rebuild it
+        # from the upstream Dockerfile via a separate `docker build .` step.
+        BASE_IMAGE: ${HERMES_BASE_IMAGE:-hermes-agent:base}
+    restart: unless-stopped
+    env_file:
+      - ${HOME}/.hermes/.env
+    environment:
+      - HERMES_DASHBOARD=1
+      - HERMES_CONFIG=/opt/data/config.yaml
+      - HERMES_DATA=/opt/data
+      - TZ=${TZ:-Asia/Kolkata}
+    user: "${HERMES_UID:-1000}:${HERMES_GID:-1000}"
+    ports:
+      # Loopback-only. Reach via SSH local-forward.
+      - "127.0.0.1:8642:8642"   # gateway HTTP
+      - "127.0.0.1:9119:9119"   # dashboard
+    volumes:
+      - ${HOME}/.hermes:/opt/data
+      # Mount Docker socket so the `docker` terminal backend can spawn
+      # sibling sandbox containers on the host.
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - hermes-net
+    depends_on:
+      cortex-mcp:
+        condition: service_healthy
+    mem_limit: 4g
+    shm_size: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "hermes doctor --json || exit 1"]
+      interval: 60s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  cortex-mcp:
+    image: neuraledge/cortex-mcp:latest
+    container_name: cortex-mcp
+    build:
+      context: ./neuraledge/mcp/cortex-palace
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ${HOME}/.hermes/.env
+    environment:
+      - CORTEX_MCP_TRANSPORT=sse
+      - HOST=0.0.0.0
+      - PORT=8765
+      - TZ=${TZ:-Asia/Kolkata}
+    # No published ports — reachable only inside hermes-net at
+    # http://cortex-mcp:8765/sse.
+    networks:
+      - hermes-net
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "python", "-m", "cortex_mcp.healthcheck"]
+      interval: 30s
+      timeout: 8s
+      start_period: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

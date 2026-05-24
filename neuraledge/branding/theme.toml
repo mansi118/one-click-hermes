@@ -1,0 +1,51 @@
+# NeuralEDGE brand theme tokens
+# Consumed by: plugins/ne_branding (CLI colors) + web/themes/neuraledge.css (dashboard)
+# Keep this file the single source of truth; do not duplicate values elsewhere.
+
+[meta]
+name        = "neuraledge"
+display     = "NeuralEDGE"
+version     = "1.0.0"
+
+# --- Color palette -----------------------------------------------------------
+# Primary identity. Keep these hex values stable — the dashboard CSS reads them.
+[colors]
+navy        = "#132F48"   # primary surface / dark mode background
+teal        = "#13C5B3"   # accent / interactive
+ice         = "#EFF4F9"   # light surface / canvas
+slate       = "#4C5A6A"   # secondary text / borders
+ink         = "#0A1722"   # high-contrast text on ice
+mist        = "#9AA8B6"   # tertiary text / hints
+signal      = "#13C5B3"   # success / "online"
+warn        = "#E0A422"   # warnings (degraded mode)
+danger      = "#D14545"   # errors / breaker open
+
+# Semantic aliases — UI layers reference these, not raw colors.
+[colors.semantic]
+bg          = "navy"
+bg_alt      = "ice"
+fg          = "ice"
+fg_alt      = "ink"
+muted       = "mist"
+accent      = "teal"
+border      = "slate"
+
+# --- Typography --------------------------------------------------------------
+[fonts]
+sans        = "Space Grotesk, system-ui, sans-serif"
+body        = "DM Sans, system-ui, sans-serif"
+mono        = "JetBrains Mono, ui-monospace, monospace"
+
+# --- CLI accents (TTY palette mapping) ---------------------------------------
+# 256-color codes used by the branding plugin when ANSI/24-bit is unavailable.
+[cli]
+accent_256  = 80          # teal
+muted_256   = 244         # mist
+warn_256    = 178         # warn
+danger_256  = 167         # danger
+
+# --- Asset paths (relative to repo root) -------------------------------------
+[assets]
+banner_txt  = "neuraledge/branding/banner.txt"
+banner_png  = "neuraledge/branding/banner.png"
+wordmark    = "neuraledge/branding/wordmark.svg"

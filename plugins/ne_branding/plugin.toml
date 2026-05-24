@@ -1,0 +1,36 @@
+# NeuralEDGE branding plugin manifest
+# Loaded by Hermes' plugin system at startup. The entrypoint applies banner,
+# theme tokens, and string overrides — no upstream-code edits required.
+
+[plugin]
+name        = "ne_branding"
+display     = "NeuralEDGE Branding"
+version     = "1.0.0"
+author      = "NeuralEDGE"
+description = "Replaces upstream banner / colors / display strings with NeuralEDGE identity."
+license     = "MIT"
+homepage    = "https://neuraledge.in"
+
+# Python entrypoint. Hermes' plugin loader invokes `register(host)` on import.
+[entrypoint]
+module      = "plugins.ne_branding.plugin"
+function    = "register"
+
+# Hook points the plugin attempts to attach to. Listed in priority order.
+# Each is best-effort: the plugin no-ops gracefully if a hook is absent (e.g.,
+# after an upstream rename). The CLI banner has a fallback path documented in
+# the plugin module.
+[hooks]
+attach_to   = ["banner", "strings", "theme", "startup", "personality_search_paths"]
+
+# Asset paths the plugin reads. Relative to repo root.
+[assets]
+banner      = "neuraledge/branding/banner.txt"
+theme       = "neuraledge/branding/theme.toml"
+strings     = "neuraledge/branding/strings.toml"
+persona_dir = "neuraledge/branding/persona"
+
+# Config keys this plugin honours (read from Hermes' merged config).
+[config]
+enabled_key = "plugins.ne_branding.enabled"   # bool, default true
+banner_key  = "plugins.ne_branding.show_banner" # bool, default true

@@ -1,0 +1,53 @@
+# NeuralEDGE / Hermes Agent — gitignore
+
+# Operator state (never committed; lives on the host at ~/.hermes)
+.hermes/
+hermes-data/
+
+# Secrets — only the template is committed
+.env
+.env.*
+!.env.template
+!**/.env.template
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+.eggs/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / web
+node_modules/
+.next/
+.turbo/
+.vercel/
+.cache/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs & runtime
+*.log
+logs/
+*.pid
+
+# Local docker overrides
+docker-compose.override.yml
+
+# Backups
+hermes-backup-*.tar.gz
