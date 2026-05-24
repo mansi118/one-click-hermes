@@ -1,53 +1,92 @@
 # NeuralEDGE / Hermes Agent — gitignore
 
 # Operator state (never committed; lives on the host at ~/.hermes)
-.hermes/
-hermes-data/
 
-# Secrets — only the template is committed
+# ─── Union of NeuralEDGE + upstream Hermes gitignore patterns ─────
+!**/.env.template
+!.env.template
+*$py.class
+*.egg-info/
+*.log
+*.pem
+*.pid
+*.ppk
+*.py[cod]
+*.pyc*
+*.so
+*.swo
+*.swp
+.DS_Store
+.cache/
+.direnv/
+.eggs/
 .env
 .env.*
-!.env.template
-!**/.env.template
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.venv/
-venv/
-env/
-.eggs/
-*.egg-info/
-dist/
-build/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# Node / web
-node_modules/
-.next/
-.turbo/
-.vercel/
-.cache/
-
-# Editor / OS
-.vscode/
+.env.development
+.env.development.local
+.env.local
+.env.production.local
+.env.test
+.env.test.local
+.hermes/
 .idea/
-.DS_Store
+.mypy_cache/
+.next/
+.nix-stamps/
+.pytest_cache/
+.release_notes.md
+.ruff_cache/
+.turbo/
+.venv/
+.vercel/
+.vscode/
+.worktrees/
+/_pycache/
+/venv/
 Thumbs.db
-*.swp
-*.swo
-
-# Logs & runtime
-*.log
-logs/
-*.pid
-
-# Local docker overrides
+__pycache__/
+__pycache__/model_tools.cpython-310.pyc
+__pycache__/web_tools.cpython-310.pyc
+agent-browser/
+browser-use/
+build/
+cli-config.yaml
+data/
+data/*
+dist/
 docker-compose.override.yml
-
-# Backups
+docs/superpowers/*
+env/
+environments/benchmarks/evals/
+examples/
+export*
+hermes-*/*
 hermes-backup-*.tar.gz
+hermes-data/
+hermes_agent.egg-info/
+hermes_cli/scripts/
+hermes_cli/tui_dist/*
+hermes_cli/web_dist/
+ignored/
+images/
+logs/
+mini-swe-agent/
+models-dev-upstream/
+node_modules/
+privvy*
+result
+run_datagen_kimik2-thinking.sh
+run_datagen_megascience_glm4-6.sh
+run_datagen_sonnet.sh
+skills/.hub/
+source-data/*
+temp_vision_images/
+testlogs
+tests/quick_test_dataset.jsonl
+tests/sample_dataset.jsonl
+tmp/
+venv/
+wandb/
+web/public/ds-assets/
+web/public/fonts/
+website/static/api/skills-index.json
