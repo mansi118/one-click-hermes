@@ -24,13 +24,15 @@ The NeuralEDGE additions live in:
 
 **Strictly non-overlapping (will never collide on merge):**
 
-- `neuraledge/`
-- `skills/neuraledge/`
-- `plugins/ne_branding/`
+- `neuraledge/branding/SOUL.md`
+- `neuraledge/skins/neuraledge.yaml`
+- `neuraledge/mcp/cortex-palace/`
+- `neuraledge/config/{config.defaults.yaml, mcp.json, .env.template}`
+- `neuraledge/install.sh`
+- `skills/neuraledge/<slug>/SKILL.md` (4 skills)
 - `web/themes/neuraledge.css`
-- `Dockerfile.neuraledge` (extends upstream)
-- `docker-compose.neuraledge.yml`
-- `NEURALEDGE_*.md`
+- `docker-compose.neuraledge.yml` (overlay)
+- `NEURALEDGE_*.md`, `docs/`
 
 **Intentional overrides at upstream-shared paths (resolved per
 `NEURALEDGE_PATCHES.md` → "Intentional Overrides"):**

@@ -2,7 +2,7 @@
 
 Two kinds of upgrade:
 
-1. **Upstream sync** — pulling a newer Hermes Agent release from NousResearch.
+1. **Upstream sync** — pulling a newer Hermes Agent release tag from NousResearch.
 2. **NeuralEDGE release** — changing something in the NeuralEDGE zone and shipping a
    new image / tag.
 
@@ -12,89 +12,80 @@ Two kinds of upgrade:
 
 ### Preconditions
 
-- A clean working tree on the `neuraledge` branch.
-- Upstream remote configured:
-  ```
-  git remote add upstream https://github.com/NousResearch/hermes-agent.git
-  ```
+- A clean working tree on the `main` branch.
+- Upstream remote configured: `git remote add upstream https://github.com/NousResearch/hermes-agent.git`
 - A snapshot you can roll back to (`make backup`).
+- A **release tag** to pin to (e.g. `v2026.5.16`, `v2026.6.x`). **Don't chase
+  `upstream/main` HEAD** — pin to a tag for reproducibility.
 
 ### Procedure
 
 ```bash
-make sync-upstream
+make sync-upstream UPSTREAM_TAG=v2026.6.x
 ```
 
 Which runs:
 
 ```
-git fetch upstream
-git checkout main && git pull upstream main
-git checkout neuraledge && git merge main
+git fetch upstream --tags
+git checkout main
+git merge v2026.6.x --allow-unrelated-histories -m "sync: merge upstream v2026.6.x"
 ```
 
-The merge should complete cleanly. The NeuralEDGE zone is intentionally non-overlapping
-with upstream paths.
+The merge will conflict on **exactly 4 files**: `README.md`, `LICENSE`, `CONTRIBUTING.md`,
+`.gitignore` — these are the documented overrides. NeuralEDGE-zone files
+(`neuraledge/`, `skills/neuraledge/`, `docker-compose.neuraledge.yml`, etc.) never collide.
 
-### If the merge conflicts
-
-1. Open `NEURALEDGE_PATCHES.md`. Every active core patch is logged with a re-apply recipe.
-2. Apply the recipe for the conflicting path.
-3. `git add <files> && git commit` to complete the merge.
-4. Rebuild and verify:
+### Resolving the 4 conflicts
 
 ```bash
-make build
-make up
-make doctor
+# 3 files where NeuralEDGE wins:
+git checkout --ours README.md LICENSE CONTRIBUTING.md
+git add README.md LICENSE CONTRIBUTING.md
+
+# .gitignore: union of both
+git show :2:.gitignore > /tmp/ours
+git show :3:.gitignore > /tmp/theirs
+sort -u /tmp/ours /tmp/theirs > .gitignore
+git add .gitignore
+
+git commit -m "sync: resolve upstream merge per override rule"
 ```
 
-If a conflict happens on a file **not** listed in `NEURALEDGE_PATCHES.md`, that means a
-previous change leaked outside the NeuralEDGE zone. Don't paper over it:
-
-- Identify the offending commit (`git log --follow <path>`).
-- Move the change into the NeuralEDGE zone (plugin, skill, config, or MCP).
-- Update `NEURALEDGE_PATCHES.md` if the move is impossible.
+The installer's `step_fetch` does this automatically on a fresh install.
 
 ### Post-sync test checklist
 
-Run the full Phase-acceptance checklist from `NEURALEDGE_BUILD.md` §"Test checklist":
-
 ```
 [ ] hermes doctor — all green
-[ ] cortex_status — correct for current mode
+[ ] cortex_status — correct for current CORTEX_MODE
 [ ] Telegram round-trip — send "ping", receive a reply
-[ ] Dashboard — loads via SSH tunnel, themed, no console errors
-[ ] Skills loaded — `make skills-list` shows 4 pinned NeuralEDGE skills
-[ ] Persona — system prompt includes NEURAL.md content
-[ ] Memory — Tier-1 recall works; Tier-2 stub-call succeeds
+[ ] Dashboard — loads via SSH tunnel, themed (skin: neuraledge), no console errors
+[ ] Skills loaded — `hermes skills config` shows the 4 NeuralEDGE skills as enabled
+[ ] Persona — system prompt matches ~/.hermes/SOUL.md content
+[ ] Memory — Tier-1 recall works; Tier-2 cortex_recall returns shaped results
 [ ] Ports — `ss -tlnp` shows hermes ports on 127.0.0.1 only
-[ ] Logs — secrets redacted
+[ ] Logs — secrets redacted in `docker compose logs gateway`
 ```
 
 Once green, tag the release:
 
 ```bash
-git tag -a ne-v<upstream>-<n> -m "Sync upstream <upstream>; iteration <n>"
-git push origin ne-v<upstream>-<n>
+git tag -a ne-v0.14.0-2 -m "Sync upstream v2026.5.16; iteration 2"
+git push origin ne-v0.14.0-2
 ```
 
 ---
 
 ## NeuralEDGE-only release
 
-For changes that don't involve an upstream sync (e.g. updating a skill, bumping the
-bridge version):
+For changes that don't involve an upstream sync (e.g. updating a skill, tweaking the
+skin, bumping the bridge version):
 
 ```bash
-# 1. Make changes in the NeuralEDGE zone.
-# 2. Rebuild.
-make build
-make up
-# 3. Verify against the test checklist above.
-# 4. Tag and push.
-git tag -a ne-v<upstream>-<n+1> -m "Skill update: tighten engagement playbook"
-git push origin ne-v<upstream>-<n+1>
+make build && make up && make doctor
+git tag -a ne-v0.14.0-<n+1> -m "Skill update: tighten engagement playbook"
+git push origin ne-v0.14.0-<n+1>
 ```
 
 ---
@@ -105,7 +96,7 @@ Operator runs on the VPS:
 
 ```bash
 cd /opt/neuraledge-agent
-git pull origin neuraledge
+git pull origin main
 make build
 make up      # rolls the containers
 make doctor
@@ -120,7 +111,8 @@ make up
 make doctor
 ```
 
-State in `~/.hermes/` is untouched by upgrades — config and memory survive.
+State in `~/.hermes/` is untouched by upgrades — config, SOUL.md, memory, and mcp.json
+all survive.
 
 ---
 
@@ -143,7 +135,7 @@ Always also bump the version label in `pyproject.toml`.
 # Identify the merge commit
 git log --merges --first-parent -n 5
 
-# Hard reset to the pre-merge state (only do this if no one else has the bad merge)
+# Hard reset to the pre-merge state (only if no one else has the bad merge)
 git reset --hard <pre-merge-sha>
 make build
 make up

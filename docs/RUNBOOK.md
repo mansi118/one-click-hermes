@@ -1,7 +1,8 @@
 # NeuralEDGE Agent — Operations Runbook
 
-The day-2 guide. Skill version of the same content (loaded into Neural) lives at
-`skills/neuraledge/deploy-runbook.md`. This file is the human-readable expanded form.
+The day-2 guide. The canonical version (loaded into Neural at runtime) lives at
+`skills/neuraledge/deploy-runbook/SKILL.md`. This file is the human-readable expanded
+form — keep them in sync when either changes.
 
 ---
 
@@ -9,11 +10,15 @@ The day-2 guide. Skill version of the same content (loaded into Neural) lives at
 
 | Path | Contents |
 |---|---|
-| `/opt/neuraledge-agent` | Git checkout of the `neuraledge` branch |
-| `~/.hermes/config.yaml` | Active config (seeded from `neuraledge/config/config.defaults.yaml`) |
+| `/opt/neuraledge-agent` | Git checkout of `main` (NeuralEDGE scaffold + merged upstream Hermes tag) |
+| `~/.hermes/config.yaml` | Active Hermes config (seeded from `neuraledge/config/config.defaults.yaml`) |
 | `~/.hermes/.env` | Secrets, mode `600` (seeded from `.env.template`) |
+| `~/.hermes/SOUL.md` | Neural's persona (seeded from `neuraledge/branding/SOUL.md`) |
+| `~/.hermes/mcp.json` | MCP server registry (cortex-mcp registered here) |
+| `~/.hermes/skins/neuraledge.yaml` | Active skin (seeded from `neuraledge/skins/`) |
+| `~/.hermes/skills/neuraledge/<slug>/SKILL.md` | NeuralEDGE seed skills (4 of them) |
+| `~/.hermes/skills/` | Plus skills learned at runtime |
 | `~/.hermes/sessions/` | Tier-1 session memory + Honcho user model |
-| `~/.hermes/skills/` | Skills *learned at runtime*. Seed skills live in repo. |
 | `~/.hermes/workspace/` | Working files the agent creates |
 | `~/.hermes/logs/` | Structured logs (secrets redacted) |
 | `~/hermes-backups/` | `make backup` output |
@@ -29,36 +34,37 @@ Backing up `~/.hermes` is backing up the entire operator state.
 | Start | `make up` |
 | Stop | `make down` |
 | Restart | `make restart` |
-| Follow agent logs | `make logs` |
+| Follow gateway logs | `make logs` |
 | Follow MCP bridge logs | `make logs-cortex` |
 | Container status | `make ps` |
-| Self-check | `make doctor` |
+| Self-check | `make doctor`  (← the **only** green/red signal) |
 | CORTEX health | `make cortex-status` |
 | Backup | `make backup` |
-| Drop into agent shell | `make shell` |
+| Drop into gateway shell | `make shell` |
+| Tweak skill / skin / SOUL | edit files in repo, `make build`, `make restart` |
 
-All `make` targets are thin wrappers around `docker compose -f
-docker-compose.neuraledge.yml …`.
+All `make` targets are thin wrappers around
+`docker compose -f docker-compose.yml -f docker-compose.neuraledge.yml …` — the compose
+overlay model.
 
 ---
 
 ## Switching LLM provider
 
-Edit `~/.hermes/.env` for the key, and `~/.hermes/config.yaml` `provider:` block for the
-model. Then `make restart`.
+Edit `~/.hermes/config.yaml` `model:` block, and `~/.hermes/.env` for the API key:
 
 ```yaml
 # ~/.hermes/config.yaml
-provider:
-  default: anthropic
-  anthropic:
-    model: claude-sonnet-4-6
+model:
+  default: "anthropic/claude-sonnet-4-6"
+  provider: "anthropic"     # or "openrouter", "auto", "nous", etc.
 ```
 
-For a one-off switch without editing files:
+Then `make restart`. For a one-off switch without editing files:
 
 ```bash
-docker compose -f docker-compose.neuraledge.yml exec hermes hermes model anthropic/claude-sonnet-4-6
+docker compose -f docker-compose.yml -f docker-compose.neuraledge.yml \
+  exec gateway hermes model anthropic/claude-sonnet-4-6
 ```
 
 ---
@@ -73,7 +79,8 @@ CORTEX_MODE=live
 CORTEX_ENDPOINT=https://cortex.neos.internal
 CORTEX_TOKEN=<bearer>
 
-docker compose -f docker-compose.neuraledge.yml restart cortex-mcp
+docker compose -f docker-compose.yml -f docker-compose.neuraledge.yml \
+  restart cortex-mcp
 make cortex-status   # expect mode=live, all tiers ok
 ```
 
@@ -81,7 +88,7 @@ make cortex-status   # expect mode=live, all tiers ok
 
 ```bash
 # Edit ~/.hermes/.env: CORTEX_MODE=stub
-docker compose -f docker-compose.neuraledge.yml restart cortex-mcp
+make restart  # or just restart cortex-mcp
 ```
 
 Neural detects the mode automatically — no agent restart needed for tool behaviour
@@ -91,7 +98,7 @@ change; new tool calls hit the updated client immediately.
 
 ## Dashboard access
 
-Bound to `127.0.0.1` on the VPS. Use an SSH local-forward — never expose to the
+Bound to `127.0.0.1:9119` on the VPS. Use an SSH local-forward — never expose to the
 internet.
 
 ```bash
@@ -132,17 +139,17 @@ If the dashboard says "disconnected", check `make doctor` and `make logs`.
 
 ### Agent unresponsive on Telegram
 
-1. `make ps` — both services running?
-2. `make logs | tail -100` — recent errors?
-3. `make doctor` — provider key, MCP bridge, skills load.
+1. `make ps` — all 3 services running?
+2. `make logs | tail -100` — recent errors in gateway?
+3. `make doctor` — model key, MCP bridge, skin, SOUL all green?
 4. Provider rate-limit? Switch via `hermes model` to the fallback provider.
 
 ### CORTEX bridge unhealthy
 
 1. `make cortex-status` — which tier is down?
 2. `make logs-cortex` — TLS, auth, or network error?
-3. If you can't fix CORTEX immediately, flip `CORTEX_MODE=stub` and restart `cortex-mcp`
-   so Neural keeps working on Tier-1 memory.
+3. If you can't fix CORTEX immediately, flip `CORTEX_MODE=stub` in `~/.hermes/.env` and
+   restart cortex-mcp so Neural keeps working on Tier-1 memory.
 
 ### Disk filling up
 
@@ -161,17 +168,17 @@ Visible in `dmesg` and `journalctl -k`. Confirm with `free -h`.
 
 ### "I can't `make sync-upstream`"
 
-Check `NEURALEDGE_PATCHES.md`. If empty, the conflict is unexpected — something
-violated the fork seam. Find the offending commit in the NeuralEDGE branch and move the
-change out of the upstream zone before re-attempting the merge.
+Check the 4 conflicts (README/LICENSE/CONTRIBUTING/.gitignore) are auto-resolving per
+`docs/UPGRADING.md`. If a conflict appears on a file NOT in that list, the seam was
+violated — find the offending commit and move the change into the NeuralEDGE zone.
 
 ---
 
 ## Secrets rotation
 
-- `LLM_API_KEY`: edit `~/.hermes/.env` → `make restart`.
+- LLM API key: edit `~/.hermes/.env` → `make restart`.
 - `TELEGRAM_BOT_TOKEN`: same; bot re-pairs on next start.
-- `CORTEX_TOKEN`: edit `~/.hermes/.env` → `docker compose restart cortex-mcp`. The
-  bridge holds the token; Hermes never sees it.
+- `CORTEX_TOKEN`: edit `~/.hermes/.env` → restart cortex-mcp. The bridge holds the
+  token; the gateway never sees it.
 
 Never `git add` `.env`. The `.gitignore` excludes it but human attention is the backstop.

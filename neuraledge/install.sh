@@ -5,20 +5,23 @@
 #   curl -fsSL https://get.neuraledge.in/agent | bash
 #
 # Idempotent: every step is safe to re-run. The script never clobbers an
-# existing ~/.hermes/config.yaml or .env — it only seeds them when absent.
+# existing ~/.hermes/config.yaml, SOUL.md, mcp.json, or .env — it only seeds
+# them when absent.
 #
-# See NEURALEDGE_DESIGN.md §4.2 and skills/neuraledge/deploy-runbook.md
-# for the operational context.
+# This installer is an overlay on stock Hermes Agent v2026.5.16. It does NOT
+# patch upstream code — it lays the NeuralEDGE distribution (SOUL.md, skin,
+# skills, mcp.json) into ~/.hermes alongside the upstream container.
 
 set -euo pipefail
 
 # ── Config ─────────────────────────────────────────────────────────────────
 
-REPO_URL="${NE_REPO_URL:-https://github.com/neuraledge/hermes-agent.git}"
-REPO_BRANCH="${NE_REPO_BRANCH:-neuraledge}"
+REPO_URL="${NE_REPO_URL:-https://github.com/mansi118/one-click-hermes.git}"
+REPO_BRANCH="${NE_REPO_BRANCH:-main}"
 INSTALL_DIR="${NE_INSTALL_DIR:-/opt/neuraledge-agent}"
 STATE_DIR="${HOME}/.hermes"
-COMPOSE_FILE="docker-compose.neuraledge.yml"
+COMPOSE_FILES="-f docker-compose.yml -f docker-compose.neuraledge.yml"
+UPSTREAM_TAG="${NE_UPSTREAM_TAG:-v2026.5.16}"
 MIN_RAM_GB="${NE_MIN_RAM_GB:-4}"
 SWAP_THRESHOLD_GB="${NE_SWAP_THRESHOLD_GB:-6}"
 SWAP_SIZE_GB="${NE_SWAP_SIZE_GB:-2}"
@@ -133,94 +136,140 @@ step_swap() {
   ok "swap added"
 }
 
-# ── Step 4: fetch repo ─────────────────────────────────────────────────────
+# ── Step 4: fetch repo + pin upstream ──────────────────────────────────────
 
 step_fetch() {
-  hd "4/10  Fetch repo"
+  hd "4/10  Fetch repo (NeuralEDGE overlay + upstream Hermes pinned to $UPSTREAM_TAG)"
   require_cmd git
   if [[ -d "$INSTALL_DIR/.git" ]]; then
     log "$INSTALL_DIR exists — pulling latest"
-    $SUDO git -C "$INSTALL_DIR" fetch --depth 1 origin "$REPO_BRANCH"
+    $SUDO git -C "$INSTALL_DIR" fetch --tags origin "$REPO_BRANCH"
     $SUDO git -C "$INSTALL_DIR" checkout "$REPO_BRANCH"
     $SUDO git -C "$INSTALL_DIR" reset --hard "origin/$REPO_BRANCH"
   else
     $SUDO mkdir -p "$(dirname "$INSTALL_DIR")"
-    $SUDO git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$INSTALL_DIR"
+    $SUDO git clone --branch "$REPO_BRANCH" "$REPO_URL" "$INSTALL_DIR"
   fi
   $SUDO chown -R "$USER:$USER" "$INSTALL_DIR"
-  ok "repo at $INSTALL_DIR ($REPO_BRANCH)"
+
+  # Ensure upstream Hermes is available at the pinned tag so docker-compose.yml
+  # can be resolved by the overlay.
+  cd "$INSTALL_DIR"
+  if ! git rev-parse --verify "$UPSTREAM_TAG" >/dev/null 2>&1; then
+    log "fetching upstream Hermes pinned to $UPSTREAM_TAG"
+    git remote get-url upstream >/dev/null 2>&1 || \
+      git remote add upstream https://github.com/NousResearch/hermes-agent.git
+    git fetch --depth 1 upstream tag "$UPSTREAM_TAG"
+    # Merge upstream into the working tree so docker-compose.yml and the
+    # Dockerfile are present. Conflicts on README/LICENSE/CONTRIBUTING/.gitignore
+    # are resolved by the documented "NeuralEDGE wins / .gitignore union" rule.
+    git merge "$UPSTREAM_TAG" --allow-unrelated-histories \
+      -m "sync: vendor upstream Hermes $UPSTREAM_TAG into install dir" || true
+    # Auto-resolve the 4 known overrides if conflicts remain:
+    for f in README.md LICENSE CONTRIBUTING.md; do
+      if git diff --name-only --diff-filter=U | grep -qx "$f"; then
+        git checkout --ours "$f" && git add "$f"
+      fi
+    done
+    # .gitignore needs a union; concatenate ours + theirs, dedupe.
+    if git diff --name-only --diff-filter=U | grep -qx ".gitignore"; then
+      git show :2:.gitignore > /tmp/gi.ours
+      git show :3:.gitignore > /tmp/gi.theirs
+      sort -u /tmp/gi.ours /tmp/gi.theirs > .gitignore
+      git add .gitignore
+    fi
+    git -c user.name="installer" -c user.email="installer@neuraledge" \
+      commit -m "auto-resolve upstream-merge conflicts per NE override rule" || true
+  fi
+  ok "repo + upstream ready at $INSTALL_DIR"
 }
 
-# ── Step 5: state ──────────────────────────────────────────────────────────
+# ── Step 5: state directory (seed distribution-owned files) ───────────────
 
 step_state() {
-  hd "5/10  State directory"
-  mkdir -p "$STATE_DIR"/{sessions,skills,workspace,logs,cron}
+  hd "5/10  State directory — seed distribution"
+  mkdir -p "$STATE_DIR"/{sessions,workspace,logs,cron,skins,skills}
   chmod 700 "$STATE_DIR"
 
-  local cfg_src="$INSTALL_DIR/neuraledge/config/config.defaults.yaml"
-  local cfg_dst="$STATE_DIR/config.yaml"
-  if [[ -f "$cfg_dst" ]]; then
-    ok "config.yaml already present — not overwriting"
+  # config.yaml
+  if [[ -f "$STATE_DIR/config.yaml" ]]; then
+    ok "config.yaml present — not overwriting"
   else
-    cp "$cfg_src" "$cfg_dst"
-    chmod 600 "$cfg_dst"
-    ok "seeded config.yaml from defaults"
+    cp "$INSTALL_DIR/neuraledge/config/config.defaults.yaml" "$STATE_DIR/config.yaml"
+    chmod 600 "$STATE_DIR/config.yaml"
+    ok "seeded config.yaml from NeuralEDGE defaults"
   fi
 
-  local env_src="$INSTALL_DIR/neuraledge/config/.env.template"
-  local env_dst="$STATE_DIR/.env"
-  if [[ -f "$env_dst" ]]; then
-    ok ".env already present — not overwriting"
+  # .env
+  if [[ -f "$STATE_DIR/.env" ]]; then
+    ok ".env present — not overwriting"
   else
-    cp "$env_src" "$env_dst"
-    chmod 600 "$env_dst"
-    ok "seeded .env from template (file mode 600)"
+    cp "$INSTALL_DIR/neuraledge/config/.env.template" "$STATE_DIR/.env"
+    chmod 600 "$STATE_DIR/.env"
+    ok "seeded .env from template (mode 600)"
   fi
+
+  # SOUL.md — Neural's persona
+  if [[ -f "$STATE_DIR/SOUL.md" ]] && ! grep -q "You are Hermes Agent" "$STATE_DIR/SOUL.md"; then
+    ok "SOUL.md present and customised — not overwriting"
+  else
+    cp "$INSTALL_DIR/neuraledge/branding/SOUL.md" "$STATE_DIR/SOUL.md"
+    chmod 600 "$STATE_DIR/SOUL.md"
+    ok "seeded SOUL.md (Neural persona)"
+  fi
+
+  # mcp.json — CORTEX-PALACE MCP server registration
+  if [[ -f "$STATE_DIR/mcp.json" ]]; then
+    ok "mcp.json present — not overwriting"
+  else
+    cp "$INSTALL_DIR/neuraledge/config/mcp.json" "$STATE_DIR/mcp.json"
+    chmod 600 "$STATE_DIR/mcp.json"
+    ok "seeded mcp.json (cortex-mcp server)"
+  fi
+
+  # skins/neuraledge.yaml
+  cp "$INSTALL_DIR/neuraledge/skins/neuraledge.yaml" "$STATE_DIR/skins/neuraledge.yaml"
+  ok "installed skin: neuraledge"
+
+  # NeuralEDGE seed skills — install (idempotent rsync-style copy)
+  cp -r "$INSTALL_DIR/skills/neuraledge" "$STATE_DIR/skills/" 2>/dev/null || \
+    rsync -a --delete "$INSTALL_DIR/skills/neuraledge/" "$STATE_DIR/skills/neuraledge/"
+  ok "installed seed skills under ~/.hermes/skills/neuraledge/"
 }
 
 # ── Step 6: build images ──────────────────────────────────────────────────
 
 step_build() {
-  hd "6/10  Build images"
+  hd "6/10  Build images (upstream hermes-agent + cortex-mcp)"
   cd "$INSTALL_DIR"
-  # If the upstream Hermes Dockerfile is present, build the base image first.
-  if [[ -f Dockerfile ]]; then
-    log "building upstream base image hermes-agent:base"
-    docker build -t hermes-agent:base . >/dev/null
-    ok "base image built"
-  else
-    warn "no upstream Dockerfile yet — overlay build will fail until upstream is merged"
-    warn "run 'git remote add upstream <hermes-repo-url> && git pull upstream main' first"
-  fi
-  log "building NeuralEDGE images via compose"
-  docker compose -f "$COMPOSE_FILE" build
+  [[ -f docker-compose.yml ]] || die "upstream docker-compose.yml missing — step 4 incomplete"
+  docker compose $COMPOSE_FILES build
   ok "images built"
 }
 
 # ── Step 7: setup wizard ──────────────────────────────────────────────────
 
 step_wizard() {
-  hd "7/10  Setup wizard"
-  if grep -q '^LLM_API_KEY=..' "$STATE_DIR/.env" 2>/dev/null; then
-    ok "LLM_API_KEY already set — skipping wizard"
+  hd "7/10  Setup wizard (model + Telegram)"
+  if grep -qE '^(OPENROUTER_API_KEY|ANTHROPIC_API_KEY|LLM_API_KEY)=.{8,}' "$STATE_DIR/.env" 2>/dev/null; then
+    ok "LLM API key already set — skipping wizard"
     return
   fi
   if [[ ! -t 0 ]]; then
     warn "non-interactive shell — skipping wizard"
-    warn "edit $STATE_DIR/.env to set LLM_API_KEY and TELEGRAM_BOT_TOKEN, then 'make up'"
+    warn "edit $STATE_DIR/.env and run 'make setup' later"
     return
   fi
   cd "$INSTALL_DIR"
-  log "launching interactive Hermes setup"
-  docker compose -f "$COMPOSE_FILE" run --rm hermes hermes setup || \
-    warn "wizard exited non-zero — finish setup later with 'docker compose run --rm hermes hermes setup'"
+  log "launching Hermes setup wizard"
+  docker compose $COMPOSE_FILES run --rm gateway hermes setup || \
+    warn "wizard exited non-zero — finish later with 'make setup'"
 }
 
-# ── Step 8: prompt for NeuralEDGE-specific secrets ────────────────────────
+# ── Step 8: NeuralEDGE-specific secrets ────────────────────────────────────
 
 step_secrets() {
-  hd "8/10  NeuralEDGE secrets"
+  hd "8/10  NeuralEDGE secrets (CORTEX-PALACE / n8n)"
   if [[ ! -t 0 ]]; then
     warn "non-interactive shell — leaving CORTEX_MODE=stub. Edit $STATE_DIR/.env later."
     return
@@ -252,7 +301,7 @@ step_secrets() {
 step_launch() {
   hd "9/10  Launch"
   cd "$INSTALL_DIR"
-  docker compose -f "$COMPOSE_FILE" up -d
+  docker compose $COMPOSE_FILES up -d
   ok "containers running"
 }
 
@@ -262,16 +311,16 @@ step_verify() {
   hd "10/10 Verify"
   cd "$INSTALL_DIR"
   local tries=0
-  until docker compose -f "$COMPOSE_FILE" ps --status running | grep -q neural; do
+  until docker compose $COMPOSE_FILES ps --status running | grep -q hermes; do
     tries=$((tries + 1))
-    [[ "$tries" -gt 12 ]] && die "neural container did not start; check 'docker compose logs hermes'"
+    [[ "$tries" -gt 12 ]] && die "hermes container did not start; check 'docker compose ... logs gateway'"
     sleep 2
   done
 
-  if docker compose -f "$COMPOSE_FILE" exec -T hermes hermes doctor >/dev/null 2>&1; then
+  if docker compose $COMPOSE_FILES exec -T gateway hermes doctor >/dev/null 2>&1; then
     ok "hermes doctor: green"
   else
-    warn "hermes doctor reported issues — run 'docker compose logs hermes' to investigate"
+    warn "hermes doctor reported issues — run 'make logs' to investigate"
   fi
 
   cat <<EOF
@@ -282,13 +331,13 @@ ${C_INK}NeuralEDGE Agent is up.${C_RESET}
   Dashboard:    ssh -L 9119:localhost:9119 $USER@$(hostname -I | awk '{print $1}')
                 then open http://localhost:9119
 
-  Telegram:     send your bot a message; if no reply, re-run the setup wizard:
-                docker compose -f $COMPOSE_FILE run --rm hermes hermes setup
+  Telegram:     send your bot a message; if no reply, re-run setup:
+                make setup
 
-  Logs:         cd $INSTALL_DIR && make logs
-  Health:       cd $INSTALL_DIR && make doctor
-  Backup:       cd $INSTALL_DIR && make backup
-  Stop:         cd $INSTALL_DIR && make down
+  Logs:         make logs
+  Health:       make doctor          ${C_MUTED}(THE green/red signal)${C_RESET}
+  Backup:       make backup
+  Stop:         make down
 
 ${C_WARN}Reminder:${C_RESET} restrict SSH (port 22) to your operator IP in the AWS Security
 Group. Nothing else should be reachable from the public internet.
@@ -302,7 +351,7 @@ main() {
   cat <<EOF
 ${C_TEAL}
   NeuralEDGE Agent · Neural
-  one-click installer
+  one-click installer (overlay on Hermes ${UPSTREAM_TAG})
 ${C_RESET}
 EOF
   step_preflight

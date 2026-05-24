@@ -1,6 +1,15 @@
 # NeuralEDGE Agent ("Neural") — End-to-End Technical System Design
 
-**Status:** Design v1 · **Base:** Hermes Agent v0.14.0 (NousResearch, MIT) · **Codename:** Neural
+**Status:** Design v1.1 · **Base:** Hermes Agent `v0.14.0` = `v2026.5.16` (NousResearch, MIT) · **Codename:** Neural
+
+**v1.1 changelog (2026-05-24):** Replaced the duck-typed branding plugin with the
+upstream-blessed Skin system (`hermes_cli/skin_engine.py`). Aligned config keys to
+real Hermes schema (`model:`, `terminal:`, `skills.disabled:`, `display.skin:`).
+Moved persona to `SOUL.md` per Hermes conventions. MCP server registration moved to
+`~/.hermes/mcp.json`. Skills restructured to `<slug>/SKILL.md` directories.
+docker-compose.neuraledge.yml is now a true overlay on upstream's compose.
+**Net effect: zero core patches.** See §11 (NEW) for the v2 path — ship as a Hermes
+distribution rather than a fork.
 **Owner:** ML / NeuralEDGE · **Companion doc:** `NEURALEDGE_BUILD.md` (phased build spec)
 
 This document is the technical design behind the build spec. The build spec says *what to
@@ -57,61 +66,69 @@ seam between them:
 ```
   UPSTREAM ZONE  (never edit)              NEURALEDGE ZONE  (all custom work)
   ─────────────────────────                ────────────────────────────────
-  agent/        gateway/                   neuraledge/branding/
-  providers/    hermes_*.py                neuraledge/mcp/cortex-palace/
-  cli.py        tools/  cron/              neuraledge/config/
-  web/ (structure)                         neuraledge/install.sh
-  Dockerfile (base)                        skills/neuraledge/
-                                           docker-compose.neuraledge.yml
+  agent/        gateway/                   neuraledge/branding/SOUL.md
+  providers/    hermes_*.py                neuraledge/skins/neuraledge.yaml
+  cli.py        tools/  cron/              neuraledge/mcp/cortex-palace/
+  hermes_cli/   skills/{apple,...}/        neuraledge/config/{config.defaults.yaml, mcp.json, .env.template}
+  Dockerfile  docker-compose.yml           neuraledge/install.sh
+  plugins/{memory,web,…}/                  skills/neuraledge/<slug>/SKILL.md  × 4
+                                           docker-compose.neuraledge.yml   (overlay)
 ```
 
-**The seam is enforced by 4 mechanisms:**
+**The seam is enforced by 5 upstream-blessed extension points** (verified against
+`v2026.5.16` — see verification log in `NEURALEDGE_PATCHES.md`):
 
-1. **Plugin system** — Hermes loads plugins from `plugins/`. Branding, custom tools, and
-   startup hooks register here. A plugin is the preferred attach point for any behaviour change.
-2. **Skills directory** — pure Markdown, zero code. Company knowledge attaches here.
-3. **Config layering** — `~/.hermes/config.yaml` carries all defaults (provider, persona,
-   MCP servers, skill paths). Nothing is hardcoded that config can carry.
-4. **MCP** — external capability (CORTEX-PALACE, n8n) attaches as MCP servers, not as code
-   inside the agent.
+1. **Skin system** (`hermes_cli/skin_engine.py`) — YAML skin at `~/.hermes/skins/<name>.yaml`
+   carries banner, colors, branding strings, spinner. Activated by `display.skin:` in
+   `config.yaml`. Replaces what a "branding plugin" would have done. Zero Python code.
+2. **SOUL.md** — single persona file at `$HERMES_HOME/SOUL.md`. Seeded on first run from
+   `DEFAULT_SOUL_MD`; the installer overrides with the NeuralEDGE soul.
+3. **Skills** (`skills/<category>/<slug>/SKILL.md`) — directory-per-skill, YAML frontmatter,
+   tags under `metadata.hermes.tags`. Auto-loaded; opt-out via `skills.disabled:` in config.
+4. **mcp.json** (`~/.hermes/mcp.json`) — MCP server registry. CORTEX-PALACE bridge lives here.
+   Distribution-owned file.
+5. **Config layering** (`~/.hermes/config.yaml`) — real Hermes schema:
+   `model:`, `terminal:`, `display:`, `skills:`, `gateway:`. Nothing hardcoded.
 
-Anything that cannot be done through these 4 is a **core patch** — minimal, isolated, logged
-in `NEURALEDGE_PATCHES.md`. Target: ≤2 core patches total, each ≤10 lines. The merge cost of
-upstream releases is proportional to core-patch surface area; keep it near zero.
+Anything that cannot be done through these 5 is a **core patch** — minimal, isolated, logged
+in `NEURALEDGE_PATCHES.md`. **Target: 0 core patches.** All five extension points are
+official, so the merge cost of upstream releases should remain near zero indefinitely.
 
 ---
 
 ## 3. Component Design
 
-### 3.1 Branding subsystem (`neuraledge/branding/` + branding plugin)
+### 3.1 Branding subsystem (Skin + SOUL.md)
 
 **Responsibility:** make the running agent look and speak as NeuralEDGE without restructuring
-Hermes UI code.
+Hermes UI code, and without writing any Python.
 
 **Files:**
-- `banner.txt` — ASCII banner for CLI startup.
-- `banner.png` — dashboard/README banner asset.
-- `theme.toml` — color tokens: `navy=#132F48 teal=#13C5B3 ice=#EFF4F9 slate=#4C5A6A`;
-  fonts `Space Grotesk / DM Sans / JetBrains Mono`.
-- `strings.toml` — display-string overrides (`product_name`, `tagline`, `support_url`,
-  help-footer text). Key = upstream string id, value = NeuralEDGE replacement.
-- `persona/NEURAL.md` — the SOUL/persona file (see 3.1.1).
+- `neuraledge/skins/neuraledge.yaml` — the entire CLI overlay in one file: banner (Rich
+  markup), color palette (banner_*/ui_*/status_bar_*), branding strings (agent_name,
+  welcome, goodbye, response_label, prompt_symbol, help_header), spinner faces/verbs.
+- `neuraledge/branding/SOUL.md` — Neural's persona (plain prompt text, no frontmatter).
+- `web/themes/neuraledge.css` — dashboard CSS-variable overlay. Verified at doctor-time
+  that the dashboard reads it; if not, this is dead code (harmless).
 
-**Mechanism — branding plugin** (`plugins/ne_branding/`): a Hermes plugin that on load reads
-`theme.toml` + `strings.toml` and applies overrides through whatever hook Hermes exposes for
-banner/strings. Plugins are the upstream-blessed extension point, so this survives merges.
+**Mechanism — Skin system** (`hermes_cli/skin_engine.py`, upstream-blessed):
+- Drop the skin YAML into `~/.hermes/skins/neuraledge.yaml` (installer seeds it).
+- Set `display.skin: neuraledge` in `~/.hermes/config.yaml`.
+- Activated globally; switchable at runtime via `/skin <name>` in the CLI.
+- All branding goes through `get_active_skin()` calls already wired in `banner.py`,
+  the prompt renderer, the status bar, completion menus, etc.
+- **No plugin, no manifest, no Python code.** No duck-typing of hook names.
 
-*Contingency:* if the CLI banner is hardcoded with no hook, the allowed core patch is a single
-conditional in the CLI entrypoint — "if `neuraledge/branding/banner.txt` exists, use it" —
-logged in `NEURALEDGE_PATCHES.md`.
+**Mechanism — SOUL.md**:
+- Hermes seeds `DEFAULT_SOUL_MD` into `$HERMES_HOME/SOUL.md` (default `~/.hermes/SOUL.md`)
+  on first run.
+- Our installer overrides that seed with the NeuralEDGE SOUL.md, so first boot is already
+  Neural-flavoured.
+- `hermes doctor` checks SOUL.md exists and is non-empty (`doctor.py:862`).
 
-**Dashboard (`web/`, TypeScript):** retheme via CSS-variable / theme-token file only. Swap
-color tokens, font imports, logo asset. No component restructuring — that would make every
-upstream `web/` change a conflict.
+#### 3.1.1 SOUL.md persona contract
 
-#### 3.1.1 NEURAL.md persona contract
-
-The persona file makes the agent *be* Neural. Content requirements:
+Plain markdown, no YAML frontmatter (matches upstream's `DEFAULT_SOUL_MD` shape).
 
 - **Identity:** "You are Neural, NeuralEDGE's AI executive assistant." Runs on the NeuralEDGE
   stack (OpenClaw lineage, Hermes runtime).
@@ -122,7 +139,8 @@ The persona file makes the agent *be* Neural. Content requirements:
   available as tools, and *when* to reach for each (see 3.3.4).
 - **Boundaries:** does not fabricate NEOS/client facts — queries CORTEX-PALACE instead.
 
-Loaded as the default personality via config (`personality: neural`), so no code change.
+Loaded as `~/.hermes/SOUL.md` — no `personality:` config key (that key doesn't exist in
+upstream).
 
 ### 3.2 Skills subsystem (`skills/neuraledge/`)
 
@@ -269,44 +287,59 @@ real Convex/NEOS endpoint is ready — no code change, just env + the real endpo
 
 ### 3.5 Config subsystem (`neuraledge/config/`)
 
-| File | Role |
-|---|---|
-| `config.defaults.yaml` | NeuralEDGE defaults: `personality: neural`, branding plugin enabled, `skills/neuraledge` path registered, `mcp_servers` listing `cortex-mcp` + n8n (CORTEX commented until keys set), provider default |
-| `.env.template` | Required secrets with placeholders: `LLM_API_KEY`, `TELEGRAM_BOT_TOKEN`, `CORTEX_ENDPOINT`, `CORTEX_TOKEN`, `N8N_WEBHOOK_URL`, `CORTEX_MODE` |
+Real Hermes schema, verified against `cli-config.yaml.example` at `v2026.5.16`. Three
+distribution-owned files seeded by the installer; secrets live separately in `.env`.
 
-The installer copies these into `~/.hermes` on first run **only if absent** — never clobbers
-an existing operator config.
+| File | Seeded to | Role |
+|---|---|---|
+| `config.defaults.yaml` | `~/.hermes/config.yaml` | `model:` (provider+default), `terminal:` (docker backend), `display.skin: neuraledge`, `skills.disabled: []`, `gateway:`, `worktree: false`. **No** `personality:` / `plugins:` / `mcp_servers:` keys — those aren't real. |
+| `mcp.json` | `~/.hermes/mcp.json` | MCP server registry. Contains `cortex-mcp` (SSE transport, `http://127.0.0.1:8765/sse`). |
+| `.env.template` | `~/.hermes/.env` | Secrets: `OPENROUTER_API_KEY`, `TELEGRAM_BOT_TOKEN`, `CORTEX_*`, `N8N_WEBHOOK_URL`, `HERMES_UID/GID`. |
+
+The installer copies each file **only if absent** in `~/.hermes` — operator overrides are
+always preserved. SOUL.md gets a smarter check: it's overwritten only if it still contains
+the upstream default text ("You are Hermes Agent"), so the NeuralEDGE seed wins on first
+install but operator edits survive re-runs.
 
 ---
 
 ## 4. Deployment Architecture
 
-### 4.1 Container topology
+### 4.1 Container topology — overlay model
 
-`docker-compose.neuraledge.yml` defines a 2-service stack on a private bridge network:
+We compose **upstream's `docker-compose.yml`** with our overlay
+**`docker-compose.neuraledge.yml`**. No service is reimplemented; the overlay only adds
+the `cortex-mcp` service and one `depends_on` link.
 
 ```
-  network: hermes-net  (bridge, internal)
+  Compose invocation:
+    docker compose -f docker-compose.yml -f docker-compose.neuraledge.yml up -d
 
-  service: hermes            service: cortex-mcp
-  ─────────────────          ──────────────────
-  image: neuraledge/         image: neuraledge/
-    hermes-neuraledge          cortex-mcp
-  cmd: gateway run           cmd: (FastMCP server)
-  ports (127.0.0.1 only):    no published ports
-    8642 gateway               (reached by hermes
-    9119 dashboard              via hermes-net DNS
-  env: HERMES_DASHBOARD=1       name "cortex-mcp")
-  vol: ~/.hermes:/opt/data   env: CORTEX_MODE,
-  mem 4G, shm 1g                  CORTEX_ENDPOINT,
-  restart: unless-stopped         CORTEX_TOKEN
-                             restart: unless-stopped
+  All three services use network_mode: host (consistency with upstream).
+
+  service: gateway          service: dashboard       service: cortex-mcp
+  ────────────────          ─────────────────        ───────────────────
+  image: hermes-agent       image: hermes-agent      image: neuraledge/cortex-mcp
+  (from upstream's          (from upstream's         (built from
+   ./Dockerfile)             ./Dockerfile, same       neuraledge/mcp/cortex-palace/
+  cmd: gateway run           image, different cmd)    Dockerfile)
+  net: host                 net: host                net: host
+  vol: ~/.hermes:/opt/data  vol: ~/.hermes:/opt/data env: HOST=127.0.0.1, PORT=8765
+  env: HERMES_UID/GID       cmd: dashboard --host    cmd: python -m
+                             127.0.0.1 --no-open      cortex_mcp.server
+                                                     (binds to 127.0.0.1:8765)
+                                                     depends_on: (added in overlay)
+  depends_on: cortex-mcp
+  (added in overlay)
 ```
 
-- `hermes` reaches the bridge as `http://cortex-mcp:<port>` — container DNS, no host exposure.
-- Both `hermes` ports bound to `127.0.0.1` — not internet-reachable even if the SG allowed it.
-- One volume, `~/.hermes`. Backing it up = backing up the whole agent.
-- v1: build images on the VPS. v1.1: pre-build + push to `ghcr.io/neuraledge`, installer pulls.
+- All services use **`network_mode: host`** (upstream's choice). No bridge network.
+- **No `0.0.0.0` exposure**: dashboard binds to `127.0.0.1:9119`; cortex-mcp binds to
+  `127.0.0.1:8765`. Both reachable only from the VPS itself. Operator uses SSH tunnel.
+- Gateway reaches cortex-mcp at `http://127.0.0.1:8765/sse` (since both are host-net'd).
+- One volume, `~/.hermes:/opt/data`. Backup = `tar` of that directory.
+- v1: build hermes-agent on the VPS from upstream's `./Dockerfile`. v1.1: pre-built
+  `neuraledge/cortex-mcp` pushed to `ghcr.io/neuraledge`; installer pulls.
 
 ### 4.2 The one-click installer (`neuraledge/install.sh`)
 
@@ -478,3 +511,48 @@ the internet; rebuilding CORTEX-PALACE inside this repo.
 
 Build with `NEURALEDGE_BUILD.md` open for the phase order and acceptance checks; consult this
 document for contracts, data shapes, and the reasoning behind each boundary.
+
+---
+
+## 11. Forward path: ship as a Hermes Distribution (v2 candidate)
+
+Upstream Hermes has a native concept called a **profile distribution**
+(`hermes_cli/profile_distribution.py`) — a shippable bundle of `SOUL.md + skills/ +
+cron/ + mcp.json + config.yaml`. CLI hint quoted from the source: *"Fetch the
+distribution from its recorded source and overwrite distribution-owned files (SOUL.md,
+skills/, cron/, mcp.json). User data (memories, sessions, auth, .env) is never
+touched."*
+
+NeuralEDGE Agent **is exactly that shape**: a curated SOUL + skills + mcp.json +
+config + skin. v2 of this project could drop the fork model entirely and ship as a
+NeuralEDGE **distribution** that the operator installs with `hermes profile install
+neuraledge/distribution` on top of stock Hermes — zero fork maintenance, zero merge
+work, ever.
+
+**Why not v1:**
+- Distribution-install UX needs a hosted distribution source (a git repo Hermes can
+  clone). Easy enough — could be this same repo with a `distribution/` directory.
+- The `cortex-mcp` Docker service still needs to ship somewhere — either as a sidecar
+  the distribution registers, or as a separate compose snippet shipped alongside.
+- v1 needs to be live for the operator to start using; reworking into a distribution
+  is a v2 nicety, not a v1 blocker.
+
+**v2 deliverable shape (sketch):**
+
+```
+distribution/
+  SOUL.md
+  skills/<slug>/SKILL.md  × 4
+  mcp.json
+  config.defaults.yaml
+  skins/neuraledge.yaml
+  manifest.yaml          # distribution metadata
+  cortex-mcp/            # sidecar compose snippet + Dockerfile
+```
+
+Install becomes: `hermes profile install https://github.com/neuraledge/distribution`
+plus `docker compose -f cortex-mcp/compose.yml up -d`. No fork, no install.sh that
+clones upstream, no compose overlay. Pure distribution.
+
+Park this; do not implement in v1. The line in this section keeps it from being
+forgotten.

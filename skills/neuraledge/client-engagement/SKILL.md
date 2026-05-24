@@ -1,10 +1,13 @@
 ---
 name: client-engagement
-description: How NeuralEDGE runs a client engagement end-to-end — discovery, audit, build, train, hand-off. Use when the operator is preparing for a client call, scoping a project, writing a proposal, or asking how a phase should be structured.
-pinned: true
-priority: 75
-tags: [neuraledge, clients, process, proposals, scoping]
+description: "How NeuralEDGE runs a client engagement end-to-end — discovery, audit, build, train, hand-off. Use when the operator is preparing for a client call, scoping a project, writing a proposal, or asking how a phase should be structured."
 version: 1.0.0
+author: NeuralEDGE
+license: MIT
+metadata:
+  hermes:
+    tags: [neuraledge, clients, process, proposals, scoping]
+    related_skills: [neuraledge-context, neos-operations]
 ---
 
 # The four phases

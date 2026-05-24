@@ -1,10 +1,13 @@
 ---
 name: neuraledge-context
-description: Core facts about NeuralEDGE — what the company does, its products (NEOS, NeP), ideal customer, team, brand voice, and how Neural should represent it. Load when the operator references NeuralEDGE as a company or when crafting client-facing artefacts.
-pinned: true
-priority: 100
-tags: [neuraledge, company, product, voice, icp]
+description: "Core facts about NeuralEDGE — what the company does, its products (NEOS, NeP), ideal customer, team, brand voice. Load when the operator references NeuralEDGE as a company or when crafting client-facing artefacts."
 version: 1.0.0
+author: NeuralEDGE
+license: MIT
+metadata:
+  hermes:
+    tags: [neuraledge, company, product, voice, icp]
+    related_skills: [neos-operations, client-engagement]
 ---
 
 # NeuralEDGE — the company

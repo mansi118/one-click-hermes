@@ -1,10 +1,13 @@
 ---
 name: neos-operations
-description: How and when to query CORTEX-PALACE (NEOS long-term memory). Wings/Halls/Rooms vocabulary, L0/L1/L2 depth semantics, the two-tier memory routing rule, and the five cortex_* MCP tools. Load whenever the operator asks something that might require institutional memory or when you're deciding which memory tier to use.
-pinned: true
-priority: 95
-tags: [neuraledge, neos, cortex-palace, memory, mcp]
+description: "How and when to query CORTEX-PALACE (NEOS long-term memory). Wings/Halls/Rooms vocabulary, L0/L1/L2 depth semantics, the two-tier memory routing rule, and the five cortex_* MCP tools. Load whenever the operator asks something that might require institutional memory or when deciding which memory tier to use."
 version: 1.0.0
+author: NeuralEDGE
+license: MIT
+metadata:
+  hermes:
+    tags: [neuraledge, neos, cortex-palace, memory, mcp]
+    related_skills: [neuraledge-context]
 ---
 
 # Two-tier memory — the routing rule (read first)

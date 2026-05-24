@@ -1,0 +1,95 @@
+# NeuralEDGE skin for Hermes Agent.
+# Single source of truth for CLI branding — banner, colors, spinner, strings.
+# Installed by Dockerfile.neuraledge + install.sh into ~/.hermes/skins/neuraledge.yaml.
+# Activated by `display.skin: neuraledge` in ~/.hermes/config.yaml.
+#
+# Schema reference: hermes_cli/skin_engine.py
+# All fields are optional; unspecified keys fall back to the `default` skin.
+
+name: neuraledge
+description: "NeuralEDGE — navy + teal executive identity for Neural."
+
+# ── Colors ───────────────────────────────────────────────────────────────────
+# Brand palette: navy #132F48, teal #13C5B3, ice #EFF4F9, slate #4C5A6A,
+# signal #13C5B3, warn #E0A422, danger #D14545.
+colors:
+  banner_border:                  "#13C5B3"   # teal
+  banner_title:                   "#13C5B3"   # teal
+  banner_accent:                  "#4FE3D2"   # teal-lift
+  banner_dim:                     "#4C5A6A"   # slate
+  banner_text:                    "#EFF4F9"   # ice
+  ui_accent:                      "#13C5B3"
+  ui_label:                       "#4FE3D2"
+  ui_ok:                          "#13C5B3"
+  ui_error:                       "#D14545"
+  ui_warn:                        "#E0A422"
+  prompt:                         "#EFF4F9"
+  input_rule:                     "#13C5B3"
+  response_border:                "#13C5B3"
+  status_bar_bg:                  "#132F48"
+  status_bar_text:                "#9AA8B6"
+  status_bar_strong:              "#13C5B3"
+  status_bar_dim:                 "#4C5A6A"
+  status_bar_good:                "#13C5B3"
+  status_bar_warn:                "#E0A422"
+  status_bar_bad:                 "#D14545"
+  status_bar_critical:            "#D14545"
+  session_label:                  "#4FE3D2"
+  session_border:                 "#4C5A6A"
+  voice_status_bg:                "#132F48"
+  selection_bg:                   "#1B3B58"
+  completion_menu_bg:             "#132F48"
+  completion_menu_current_bg:     "#1B3B58"
+  completion_menu_meta_bg:        "#132F48"
+  completion_menu_meta_current_bg: "#1B3B58"
+
+# ── Spinner ──────────────────────────────────────────────────────────────────
+# Direct, minimal — matches the operator's no-filler voice preference.
+spinner:
+  waiting_faces:
+    - "(◉)"
+    - "(◎)"
+    - "(◉)"
+    - "(◌)"
+  thinking_faces:
+    - "(•)"
+    - "(◐)"
+    - "(◓)"
+    - "(◑)"
+    - "(◒)"
+  thinking_verbs:
+    - "thinking"
+    - "tracing"
+    - "routing"
+    - "recalling"
+    - "deciding"
+  wings:
+    - ["⟪◉", "◉⟫"]
+    - ["⟪△", "△⟫"]
+
+# ── Branding strings ─────────────────────────────────────────────────────────
+branding:
+  agent_name:     "Neural"
+  welcome:        "Neural online. Yatharth Sir — type a request, or /help."
+  goodbye:        "Standing by. /exit"
+  response_label: " ◉ Neural "
+  prompt_symbol:  "▸"
+  help_header:    "Neural · NeuralEDGE Agent · Commands"
+
+# ── Banner logo (Rich markup; replaces upstream HERMES_AGENT_LOGO) ───────────
+# Wordmark + tagline. Rich rendering supports inline color tags.
+banner_logo: |
+  [bold #13C5B3]███╗   ██╗███████╗██╗   ██╗██████╗  █████╗ ██╗     ███████╗██████╗  ██████╗ ███████╗[/]
+  [bold #13C5B3]████╗  ██║██╔════╝██║   ██║██╔══██╗██╔══██╗██║     ██╔════╝██╔══██╗██╔════╝ ██╔════╝[/]
+  [bold #4FE3D2]██╔██╗ ██║█████╗  ██║   ██║██████╔╝███████║██║     █████╗  ██║  ██║██║  ███╗█████╗  [/]
+  [bold #4FE3D2]██║╚██╗██║██╔══╝  ██║   ██║██╔══██╗██╔══██║██║     ██╔══╝  ██║  ██║██║   ██║██╔══╝  [/]
+  [bold #EFF4F9]██║ ╚████║███████╗╚██████╔╝██║  ██║██║  ██║███████╗███████╗██████╔╝╚██████╔╝███████╗[/]
+  [bold #EFF4F9]╚═╝  ╚═══╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝╚═════╝  ╚═════╝ ╚══════╝[/]
+  [#4C5A6A]                  ─── [/][bold #13C5B3]N E U R A L[/][#4C5A6A] · Executive AI Assistant ───[/]
+  [#9AA8B6]                  Run your business on signal, not chaos.[/]
+
+# ── Banner hero (kept minimal; lets the wordmark breathe) ────────────────────
+banner_hero: |
+  [#13C5B3]                              ◉[/]
+  [#4FE3D2]                            ◉   ◉[/]
+  [#4C5A6A]                          ◉  ◉  ◉[/]

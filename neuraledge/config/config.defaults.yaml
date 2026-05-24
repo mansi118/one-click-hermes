@@ -1,134 +1,57 @@
-# NeuralEDGE Agent — default configuration.
-# Seeded into ~/.hermes/config.yaml by the installer on first run.
-# Subsequent installer runs never clobber an existing ~/.hermes/config.yaml.
+# NeuralEDGE Agent — default Hermes config.
+# Installer seeds this to ~/.hermes/config.yaml on first run (only if absent).
+# Schema reference: cli-config.yaml.example in upstream Hermes Agent (v2026.5.16).
 #
-# Secrets live in ~/.hermes/.env, not here. See .env.template.
-# Override any value here by editing ~/.hermes/config.yaml after install.
+# Secrets live in ~/.hermes/.env, not here.
+# MCP servers live in ~/.hermes/mcp.json (seeded from neuraledge/config/mcp.json).
+# Persona lives in ~/.hermes/SOUL.md (seeded from neuraledge/branding/SOUL.md).
+# Skin lives in ~/.hermes/skins/neuraledge.yaml.
 
-# --- Identity ---------------------------------------------------------------
-identity:
-  product_name: "NeuralEDGE Agent"
-  short_name:   "Neural"
-  operator:     "Yatharth Sir"
-  organization: "NeuralEDGE"
+# ─── Model ──────────────────────────────────────────────────────────────────
+# Defaults to OpenRouter for flexibility. Swap via `hermes model` or by editing
+# the `default` field. API key comes from $OPENROUTER_API_KEY in .env.
+model:
+  default: "anthropic/claude-sonnet-4-6"
+  provider: "auto"
+  base_url: "https://openrouter.ai/api/v1"
 
-# --- Persona ----------------------------------------------------------------
-# Loaded by the branding plugin from neuraledge/branding/persona/NEURAL.md.
-personality: neural
+# ─── Terminal tool backend ──────────────────────────────────────────────────
+# Docker backend so agent-run code is sibling-sandboxed, not running inside the
+# agent container. The agent reaches the host's Docker daemon via the mounted
+# socket in docker-compose.neuraledge.yml.
+terminal:
+  backend: "docker"
+  cwd: "/workspace"
+  timeout: 180
+  lifetime_seconds: 300
+  docker_image: "nikolaik/python-nodejs:python3.11-nodejs20"
+  docker_mount_cwd_to_workspace: true
+  docker_run_as_host_user: true
 
-# --- Plugins ----------------------------------------------------------------
-plugins:
-  enabled:
-    - ne_branding
-  ne_branding:
-    enabled: true
-    show_banner: true
+# ─── Display / skin ─────────────────────────────────────────────────────────
+# Activates the NeuralEDGE skin (banner, colors, agent_name, etc.) from
+# ~/.hermes/skins/neuraledge.yaml — seeded by the installer.
+display:
+  skin: neuraledge
+  tool_progress: "new"
 
-# --- Skills -----------------------------------------------------------------
-# Hermes scans these paths for skill files (agentskills.io frontmatter format).
-# Path is relative to the repo root inside the container (mounted at /opt/app).
+# ─── Skills ─────────────────────────────────────────────────────────────────
+# Hermes loads all installed skills by default (opt-out model).
+# NeuralEDGE seed skills (skills/neuraledge/*/SKILL.md) are auto-loaded.
+# Disable per-platform if a skill should not run in a given channel.
 skills:
-  paths:
-    - skills/neuraledge
-  retrieval:
-    pinned_always_included: true   # honour `pinned: true` in skill frontmatter
+  disabled: []
+  platform_disabled:
+    telegram: []
+    cli: []
 
-# --- Provider ---------------------------------------------------------------
-# Default: OpenRouter for model flexibility. Operator can switch with
-# `hermes model` or by editing this block.
-provider:
-  default: openrouter
-  fallbacks:
-    - anthropic
-    - openai
-  openrouter:
-    model: anthropic/claude-sonnet-4
-    # api_key sourced from $LLM_API_KEY in env
-  anthropic:
-    model: claude-sonnet-4-6
-  openai:
-    model: gpt-4.1
-
-# --- MCP servers ------------------------------------------------------------
-# CORTEX-PALACE bridge over SSE on the docker bridge network.
-mcp_servers:
-  cortex-mcp:
-    enabled: true
-    transport: sse
-    url: "http://cortex-mcp:8765/sse"
-    description: "CORTEX-PALACE long-term memory (NEOS Tier-2)"
-    tools:
-      - cortex_recall
-      - cortex_remember
-      - cortex_user_model
-      - cortex_search_entities
-      - cortex_status
-
-  # n8n integration — enable once n8n.neuraledge.in is reachable from the VPS.
-  # If your n8n version exposes an MCP endpoint, swap transport+url accordingly.
-  # n8n:
-  #   enabled: false
-  #   transport: http
-  #   url: "https://n8n.neuraledge.in/mcp"
-  #   token_env: N8N_WEBHOOK_URL
-  #   description: "NeuralEDGE automation workflows"
-
-# --- Gateway / network channels --------------------------------------------
+# ─── Gateway ────────────────────────────────────────────────────────────────
+# Telegram bot token + allowed user-ids come from ~/.hermes/.env at runtime.
+# Dashboard binds to 127.0.0.1 — reach via SSH tunnel only.
 gateway:
-  # Bind to loopback only. Dashboard/gateway are reached via SSH tunnel.
-  bind: 127.0.0.1
-  http_port: 8642
-  dashboard_port: 9119
+  # proxy_url: ""   # leave unset; we run the agent in-process
 
-  channels:
-    cli:
-      enabled: true
-    telegram:
-      enabled: true
-      # bot_token sourced from $TELEGRAM_BOT_TOKEN
-    matrix:
-      enabled: false
-      # homeserver: "https://matrix.neuraledge.in"
-
-# --- Dashboard --------------------------------------------------------------
-dashboard:
-  enabled: true
-  theme:   neuraledge       # loads web/themes/neuraledge.css
-  title:   "NeuralEDGE Agent — Neural"
-
-# --- Memory (Tier 1) --------------------------------------------------------
-memory:
-  tier1:
-    enabled: true
-    sessions_path: sessions
-    fts: sqlite-fts5
-    honcho:
-      enabled: true
-  tier2:
-    via: cortex-mcp
-    routing_skill: neos-operations
-
-# --- Tools / sandbox --------------------------------------------------------
-tools:
-  # Use the docker terminal backend so agent-run code is sibling-sandboxed,
-  # not running inside the agent container.
-  terminal_backend: docker
-  browser:
-    enabled: true
-  web:
-    enabled: true
-  file:
-    enabled: true
-    workspace_path: workspace
-
-# --- Cron -------------------------------------------------------------------
-cron:
-  enabled: true
-  jobs_path: cron
-
-# --- Observability ----------------------------------------------------------
-logging:
-  level: INFO
-  format: json
-  redact_secrets: true
-  path: logs/hermes.log
+# ─── Worktree isolation ─────────────────────────────────────────────────────
+# Off by default. Turn on if multiple concurrent CLI sessions need their own
+# worktrees on the same repo.
+worktree: false

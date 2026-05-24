@@ -45,43 +45,38 @@ adopts a fork-friendly README shape), retire that row.
 
 ---
 
-## To verify on first real merge
+## Verification log (closed)
 
-Items the scaffold encoded *defensively* against guessed upstream contracts. None of
-them are patches today, but each may demand one once we see the real Hermes code.
+All items resolved against `v2026.5.16` / `v0.14.0` source tree on 2026-05-24. Net
+result: scaffold rewritten, **zero core patches needed**.
 
-1. **Branding plugin hook names** (`plugins/ne_branding/plugin.py`).
-   The plugin duck-types against likely hook attribute names — `set_banner`,
-   `register_banner`, `override_banner`; `override_strings`, etc. If none match, the
-   plugin no-ops and logs a warning. Verify by reading the real Hermes plugin host
-   and either:
-   - Confirming a hook matches → no action needed.
-   - Finding the actual hook name(s) → add them to the plugin's lookup list (still no
-     core patch).
-   - Confirming no hook exists at all → add the smallest possible core patch in the
-     CLI banner emitter and the strings registry, log here as NE-PATCH-001 / -002.
-
-2. **Personality search path env var** (`HERMES_PERSONALITY_PATHS`).
-   Used in `Dockerfile.neuraledge` ENV and by the plugin's `_attach_persona_path`
-   fallback. Verify Hermes actually reads this env name; if it uses a different one,
-   update both spots.
-
-3. **Plugin discovery directory** (`plugins/`).
-   Design §3.1 says Hermes loads plugins from `plugins/`. Verify on merge that the
-   real loader picks up `plugins/ne_branding/` automatically. If it requires an
-   explicit registration call instead, do that registration in `config.defaults.yaml`.
-
-4. **Config key shape** in `neuraledge/config/config.defaults.yaml`.
-   `personality:`, `plugins.enabled:`, `skills.paths:`, `mcp_servers:`, etc. — these
-   keys are inferred from the design doc, not the real Hermes config schema. Verify
-   against the real `hermes setup` / `hermes config` output; rename keys here as
-   needed (no core patch — just config alignment).
-
-5. **`hermes doctor`, `hermes setup`, `hermes skills list`, `hermes model`** —
-   commands referenced by the Makefile and install.sh. If the real CLI uses different
-   subcommand names, update the Makefile targets and install.sh wizard step.
-
-Track each item with `[ ]` here as you verify; flip to `[x]` once confirmed.
+- [x] **Branding plugin** — *Replaced entirely* by the upstream Skin system
+  (`hermes_cli/skin_engine.py`). YAML at `~/.hermes/skins/neuraledge.yaml`. No Python.
+  `plugins/ne_branding/` directory deleted.
+- [x] **Persona** — Real name is `SOUL.md`. Single file at `$HERMES_HOME/SOUL.md`,
+  seeded from `DEFAULT_SOUL_MD` on first run. Installer overrides with our SOUL.md.
+  No `personality:` config key (doesn't exist).
+- [x] **Plugin discovery dir** — Not applicable; we don't ship a plugin anymore.
+- [x] **Config keys** — Real schema is `model:` (with `default`/`provider`/`base_url`),
+  `terminal:`, `display:` (with `skin:`), `skills:` (with `disabled:`/`platform_disabled:`,
+  *opt-out* not opt-in), `gateway:`, `worktree:`. **MCP servers live in a separate
+  `~/.hermes/mcp.json`**, not in `config.yaml`. All updated in
+  `neuraledge/config/config.defaults.yaml`.
+- [x] **CLI subcommands** — `hermes doctor`, `hermes setup`, `hermes model` all real.
+  `hermes skills` is **interactive** (curses); subcommands: `tap`, `config`. No
+  `hermes skills list`. Makefile updated: `make skills` → `hermes skills config`.
+- [x] **Skill format** — `skills/<category>/<slug>/SKILL.md` (directory-per-skill);
+  frontmatter tags under `metadata.hermes.tags`. No `pinned:` (skills are opt-out).
+  All four NE skills restructured.
+- [x] **Docker compose** — Upstream uses `network_mode: host` with two services
+  (`gateway` + `dashboard`). Our `docker-compose.neuraledge.yml` rewritten as a true
+  overlay: adds only `cortex-mcp` (host-net, bound to `127.0.0.1:8765`) plus a
+  `depends_on` link. Usage: `docker compose -f docker-compose.yml -f
+  docker-compose.neuraledge.yml up -d`.
+- [x] **`mcp.json` format** — Standard MCP JSON: `{"mcpServers": {"<name>": {"transport":
+  "sse", "url": "...", ...}}}`. Distribution-owned file at `~/.hermes/mcp.json`. Schema
+  verified at doctor-time (the one residual uncertainty — Hermes's exact key naming may
+  vary by 1-2 fields; fix is a 1-line config edit if so).
 
 ---
 
