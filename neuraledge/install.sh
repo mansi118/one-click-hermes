@@ -246,7 +246,7 @@ step_build() {
 
 step_wizard() {
   hd "7/10  Setup wizard (model + Telegram)"
-  if grep -qE '^(OPENROUTER_API_KEY|ANTHROPIC_API_KEY|LLM_API_KEY)=.{8,}' "$STATE_DIR/.env" 2>/dev/null; then
+  if grep -qE '^(OPENROUTER_API_KEY|ANTHROPIC_API_KEY|OPENAI_API_KEY|NOUS_API_KEY|GOOGLE_API_KEY)=.{8,}' "$STATE_DIR/.env" 2>/dev/null; then
     ok "LLM API key already set — skipping wizard"
     return
   fi

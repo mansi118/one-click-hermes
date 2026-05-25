@@ -48,10 +48,10 @@ skills:
     cli: []
 
 # ─── Gateway ────────────────────────────────────────────────────────────────
-# Telegram bot token + allowed user-ids come from ~/.hermes/.env at runtime.
-# Dashboard binds to 127.0.0.1 — reach via SSH tunnel only.
-gateway:
-  # proxy_url: ""   # leave unset; we run the agent in-process
+# Telegram bot token + allowed user-ids come from ~/.hermes/.env at runtime
+# (TELEGRAM_BOT_TOKEN, optional TELEGRAM_ALLOWED_USERS, TELEGRAM_HOME_CHANNEL).
+# Dashboard binds to 127.0.0.1 (upstream compose command flag) — SSH tunnel only.
+# No `gateway:` block needed — upstream reads env directly.
 
 # ─── MCP servers ────────────────────────────────────────────────────────────
 # Server entry shape (per tools/mcp_tool.py):

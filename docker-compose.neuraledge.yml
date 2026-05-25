@@ -15,11 +15,17 @@
 # network, no published ports, no host exposure.
 
 services:
-  # ── inherit upstream gateway, only add the dependency ─────────────────────
+  # ── inherit upstream gateway, add cortex-mcp dependency + docker-sock mount
+  #    (the latter is required by terminal.backend: "docker" in config.yaml,
+  #    which we set so the agent's shell tool spawns sibling sandbox
+  #    containers on the host rather than running in-process inside the
+  #    gateway container itself).
   gateway:
     depends_on:
       cortex-mcp:
         condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
   # ── new: CORTEX-PALACE MCP bridge ─────────────────────────────────────────
   cortex-mcp:
