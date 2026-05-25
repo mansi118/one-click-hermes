@@ -16,7 +16,22 @@ and re-read Design §2 — the fix is probably a plugin, not a patch.
 
 ## Active Patches
 
-_None yet. Phases 1–6 are designed to ship without any core patch._
+_None yet. Phases 1–6 ship without any core patch._
+
+---
+
+## Known v1 deficits (documented, not patched)
+
+Trade-offs we accept to keep the patch budget at zero. Each could become a core
+patch later if the limitation matters.
+
+1. **Dashboard theme.** Hermes's React dashboard uses an in-codebase theme registry
+   (`web/src/themes/presets.ts` + `_BUILTIN_DASHBOARD_THEMES` in
+   `hermes_cli/web_server.py`). Adding a "neuraledge" theme requires editing two
+   upstream files. v1 ships the CLI branded (skin system) and the dashboard on
+   stock Hermes-teal. *Workaround:* operator can pick a built-in dashboard theme
+   via the dashboard's UI; that doesn't carry NE colors but is at least
+   user-customizable.
 
 ---
 

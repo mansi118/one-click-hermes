@@ -25,7 +25,14 @@ services:
       cortex-mcp:
         condition: service_healthy
     volumes:
+      # Sibling-sandbox docker — required by terminal.backend: "docker" in
+      # config.yaml. Without this, the agent's shell tool can't spawn
+      # sandbox containers and silently fails on first use.
       - /var/run/docker.sock:/var/run/docker.sock
+    # /dev/shm default is 64 MB. Playwright/Chrome (browser skill) and large
+    # pip installs in the sandbox can OOM with that. Bump to 1 GB so the
+    # browser tool doesn't fail on first use with cryptic "page crashed".
+    shm_size: 1g
 
   # ── new: CORTEX-PALACE MCP bridge ─────────────────────────────────────────
   cortex-mcp:

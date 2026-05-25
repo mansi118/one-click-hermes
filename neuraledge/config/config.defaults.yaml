@@ -20,14 +20,19 @@ model:
 # ─── Terminal tool backend ──────────────────────────────────────────────────
 # Docker backend so agent-run code is sibling-sandboxed, not running inside the
 # agent container. The agent reaches the host's Docker daemon via the mounted
-# socket in docker-compose.neuraledge.yml.
+# socket in docker-compose.neuraledge.yml (gateway service).
+#
+# CRITICAL: docker_mount_cwd_to_workspace is FALSE. Setting it true mounts the
+# gateway container's cwd (/opt/data — which contains .env, SOUL.md, sessions,
+# auth credentials) into every sandbox the agent spawns. That leaks secrets to
+# arbitrary agent-executed commands. Keep it false; the sandbox gets an empty
+# /workspace and writes are ephemeral per the standard sandbox model.
 terminal:
   backend: "docker"
-  cwd: "/workspace"
   timeout: 180
   lifetime_seconds: 300
   docker_image: "nikolaik/python-nodejs:python3.11-nodejs20"
-  docker_mount_cwd_to_workspace: true
+  docker_mount_cwd_to_workspace: false
   docker_run_as_host_user: true
 
 # ─── Display / skin ─────────────────────────────────────────────────────────

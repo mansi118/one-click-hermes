@@ -113,8 +113,14 @@ Hermes UI code, and without writing any Python.
   markup), color palette (banner_*/ui_*/status_bar_*), branding strings (agent_name,
   welcome, goodbye, response_label, prompt_symbol, help_header), spinner faces/verbs.
 - `neuraledge/branding/SOUL.md` — Neural's persona (plain prompt text, no frontmatter).
-- `web/themes/neuraledge.css` — dashboard CSS-variable overlay. Verified at doctor-time
-  that the dashboard reads it; if not, this is dead code (harmless).
+
+**Dashboard theming — v1 deficit (intentional):** Hermes's web dashboard has its own
+React-side theme system at `web/src/themes/presets.ts`, with theme names that must stay
+in sync with `_BUILTIN_DASHBOARD_THEMES` in `hermes_cli/web_server.py`. Adding a
+"neuraledge" theme there would require editing two upstream files = core patches we
+don't want. v1 ships the CLI branded and the dashboard on stock Hermes-teal.
+A separate v2 path (or a tiny core patch documented in `NEURALEDGE_PATCHES.md`) can
+fix this if dashboard branding becomes important.
 
 **Mechanism — Skin system** (`hermes_cli/skin_engine.py`, upstream-blessed):
 - Drop the skin YAML into `~/.hermes/skins/neuraledge.yaml` (installer seeds it).

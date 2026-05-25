@@ -89,6 +89,7 @@ step_docker() {
   hd "2/10  Docker"
   if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
     ok "docker + compose already installed"
+    _set_docker_cmd
     return
   fi
 
@@ -109,9 +110,27 @@ https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
 
   if [[ -n "$SUDO" ]]; then
     $SUDO usermod -aG docker "$USER" || true
-    warn "added '$USER' to the 'docker' group — log out & back in for it to apply"
+    warn "added '$USER' to the 'docker' group — new group not yet applied to this shell"
   fi
   ok "Docker installed"
+  _set_docker_cmd
+}
+
+# Detect docker access mode for this shell. Sets DOCKER_MODE to one of:
+#   "direct"  — user already in docker group; bare `docker` works
+#   "sg"      — user just added to docker group; use sg docker -c wrapper
+#   "sudo"    — neither works; fall back to sudo (always last resort)
+# Called once after docker is installed and once at startup.
+_set_docker_cmd() {
+  if docker info >/dev/null 2>&1; then
+    DOCKER_MODE="direct"
+  elif command -v sg >/dev/null 2>&1 && sg docker -c "docker info" >/dev/null 2>&1; then
+    DOCKER_MODE="sg"
+    warn "using 'sg docker' wrapper for the rest of this install (group not yet active)"
+  else
+    DOCKER_MODE="sudo"
+    warn "using sudo for docker commands (no docker-group access in this shell)"
+  fi
 }
 
 # ── Step 3: swap ───────────────────────────────────────────────────────────
@@ -210,6 +229,18 @@ step_state() {
     ok "seeded .env from template (mode 600)"
   fi
 
+  # Always set HERMES_UID/GID to the actual host operator (not template default).
+  # File ownership inside ~/.hermes must match the host user or the container
+  # gosu remap can't write back.
+  local host_uid host_gid host_tz
+  host_uid=$(id -u)
+  host_gid=$(id -g)
+  host_tz=$(cat /etc/timezone 2>/dev/null || echo "Asia/Kolkata")
+  sed -i "s|^HERMES_UID=.*|HERMES_UID=$host_uid|" "$STATE_DIR/.env"
+  sed -i "s|^HERMES_GID=.*|HERMES_GID=$host_gid|" "$STATE_DIR/.env"
+  sed -i "s|^TZ=.*|TZ=$host_tz|"                  "$STATE_DIR/.env"
+  ok "set HERMES_UID=$host_uid HERMES_GID=$host_gid TZ=$host_tz in .env"
+
   # SOUL.md — Neural's persona
   if [[ -f "$STATE_DIR/SOUL.md" ]] && ! grep -q "You are Hermes Agent" "$STATE_DIR/SOUL.md"; then
     ok "SOUL.md present and customised — not overwriting"
@@ -238,8 +269,24 @@ step_build() {
   hd "6/10  Build images (upstream hermes-agent + cortex-mcp)"
   cd "$INSTALL_DIR"
   [[ -f docker-compose.yml ]] || die "upstream docker-compose.yml missing — step 4 incomplete"
-  docker compose $COMPOSE_FILES build
+  _docker_compose build
   ok "images built"
+}
+
+# Run `docker compose -f ... -f ... <args>` honoring the access mode chosen
+# in _set_docker_cmd. The COMPOSE_FILES var is the two -f flags (overlay).
+_docker_compose() {
+  case "${DOCKER_MODE:-direct}" in
+    sg)
+      sg docker -c "docker compose $COMPOSE_FILES $*"
+      ;;
+    sudo)
+      $SUDO docker compose $COMPOSE_FILES "$@"
+      ;;
+    *)
+      docker compose $COMPOSE_FILES "$@"
+      ;;
+  esac
 }
 
 # ── Step 7: setup wizard ──────────────────────────────────────────────────
@@ -257,7 +304,7 @@ step_wizard() {
   fi
   cd "$INSTALL_DIR"
   log "launching Hermes setup wizard"
-  docker compose $COMPOSE_FILES run --rm gateway hermes setup || \
+  _docker_compose run --rm gateway hermes setup || \
     warn "wizard exited non-zero — finish later with 'make setup'"
 }
 
@@ -296,7 +343,7 @@ step_secrets() {
 step_launch() {
   hd "9/10  Launch"
   cd "$INSTALL_DIR"
-  docker compose $COMPOSE_FILES up -d
+  _docker_compose up -d
   ok "containers running"
 }
 
@@ -306,13 +353,13 @@ step_verify() {
   hd "10/10 Verify"
   cd "$INSTALL_DIR"
   local tries=0
-  until docker compose $COMPOSE_FILES ps --status running | grep -q hermes; do
+  until _docker_compose ps --status running | grep -q hermes; do
     tries=$((tries + 1))
     [[ "$tries" -gt 12 ]] && die "hermes container did not start; check 'docker compose ... logs gateway'"
     sleep 2
   done
 
-  if docker compose $COMPOSE_FILES exec -T gateway hermes doctor >/dev/null 2>&1; then
+  if _docker_compose exec -T gateway hermes doctor >/dev/null 2>&1; then
     ok "hermes doctor: green"
   else
     warn "hermes doctor reported issues — run 'make logs' to investigate"

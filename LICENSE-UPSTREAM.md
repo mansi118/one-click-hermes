@@ -30,7 +30,6 @@ The NeuralEDGE additions live in:
 - `neuraledge/config/{config.defaults.yaml, .env.template}`
 - `neuraledge/install.sh`
 - `skills/neuraledge/<slug>/SKILL.md` (4 skills)
-- `web/themes/neuraledge.css`
 - `docker-compose.neuraledge.yml` (overlay)
 - `NEURALEDGE_*.md`, `docs/`
 

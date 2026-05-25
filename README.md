@@ -124,13 +124,12 @@ Routing rule: see `skills/neuraledge/neos-operations/SKILL.md`.
 │   ├── install.sh          One-click installer (idempotent, 10 steps)
 │   └── mcp/cortex-palace/  CORTEX-PALACE MCP bridge (FastMCP, Python, stub-first)
 ├── skills/neuraledge/      4 seed skills, each as <slug>/SKILL.md
-├── web/themes/             Dashboard CSS overlay (verified at doctor-time)
 ├── docker-compose.neuraledge.yml   Overlay — adds cortex-mcp service
 ├── Makefile                Lifecycle + ops + upstream sync targets
 └── LICENSE / LICENSE-UPSTREAM.md
 ```
 
-Everything under `neuraledge/`, `skills/neuraledge/`, `web/themes/neuraledge.css`, and
+Everything under `neuraledge/`, `skills/neuraledge/`, and
 `docker-compose.neuraledge.yml` is the **NeuralEDGE zone**. Top-level meta files
 (README, LICENSE, CONTRIBUTING, .gitignore, Makefile) override upstream at merge time
 per the rule in `NEURALEDGE_PATCHES.md`.
