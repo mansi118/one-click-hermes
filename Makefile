@@ -13,7 +13,10 @@ DATE           := $(shell date +%Y%m%d-%H%M%S)
 
 # Upstream tag we pin to. Override on CLI: `make sync-upstream UPSTREAM_TAG=v2026.7.x`
 UPSTREAM_TAG    ?= v2026.5.16
-LOCAL_BRANCH    ?= main
+# Production branch (carries the NeuralEDGE overlay).
+LOCAL_BRANCH    ?= neuraledge
+# Pure-upstream mirror branch. Always reset to UPSTREAM_TAG; never holds NE files.
+UPSTREAM_BRANCH ?= main
 
 .DEFAULT_GOAL := help
 
@@ -123,12 +126,17 @@ restore: ## Restore latest backup from ~/hermes-backups/ (asks confirmation)
 ## ──────────────────────────────────────────────────────────────────────────
 
 .PHONY: sync-upstream
-sync-upstream: ## Pull upstream Hermes pinned to $(UPSTREAM_TAG); merge into $(LOCAL_BRANCH)
+sync-upstream: ## Pin $(UPSTREAM_BRANCH) to $(UPSTREAM_TAG); merge into $(LOCAL_BRANCH)
 	@git fetch upstream --tags
+	@git checkout $(UPSTREAM_BRANCH)
+	@git reset --hard $(UPSTREAM_TAG)
+	@echo "→ $(UPSTREAM_BRANCH) pinned to $(UPSTREAM_TAG). Push with:"
+	@echo "    git push --force-with-lease origin $(UPSTREAM_BRANCH)"
 	@git checkout $(LOCAL_BRANCH)
-	@git merge $(UPSTREAM_TAG) --allow-unrelated-histories -m "sync: merge upstream $(UPSTREAM_TAG)" \
-	  || ( echo "merge had conflicts — check NEURALEDGE_PATCHES.md for re-apply recipe"; exit 1 )
-	@echo "synced to $(UPSTREAM_TAG); rebuild with 'make build' and verify with 'make doctor'"
+	@git merge $(UPSTREAM_BRANCH) --allow-unrelated-histories \
+	  -m "sync: merge upstream $(UPSTREAM_TAG) into $(LOCAL_BRANCH)" \
+	  || ( echo "merge conflicts — see NEURALEDGE_PATCHES.md override rule"; exit 1 )
+	@echo "→ $(LOCAL_BRANCH) now contains $(UPSTREAM_TAG); rebuild with 'make build' and verify with 'make doctor'"
 
 ## ──────────────────────────────────────────────────────────────────────────
 ##  Dev (cortex-mcp)

@@ -7,9 +7,11 @@ Hermes or extending the NeuralEDGE zone. This guide covers both.
 
 ## 1. Repo topology
 
-- **`main`** — production branch. Holds the NeuralEDGE scaffold plus a merged-in
-  release tag of upstream Hermes (currently `v2026.5.16`).
-- **`upstream` remote** — tracks NousResearch upstream. Synced via `make sync-upstream`.
+- **`main`** — pure upstream mirror, pinned to a release tag (currently `v2026.5.16`).
+  **Never holds NE files.** Reset hard by `make sync-upstream` to the new tag.
+- **`neuraledge`** — production branch. Carries the NE overlay plus the merged-in
+  upstream tag. This is what `install.sh` defaults to and what the deployed agent runs.
+- **`upstream` remote** — tracks NousResearch. Synced via `make sync-upstream`.
 
 Two zones, hard seam (verified empty of leaks against `v2026.5.16`):
 
@@ -35,7 +37,7 @@ smallest possible core patch. Target remains **0 core patches**.
 ## 2. Local dev
 
 ```bash
-git clone -b main git@github.com:mansi118/one-click-hermes.git
+git clone -b neuraledge git@github.com:mansi118/one-click-hermes.git
 cd one-click-hermes
 git remote add upstream https://github.com/NousResearch/hermes-agent.git
 

@@ -18,7 +18,10 @@ set -euo pipefail
 # ── Config ─────────────────────────────────────────────────────────────────
 
 REPO_URL="${NE_REPO_URL:-https://github.com/mansi118/one-click-hermes.git}"
-REPO_BRANCH="${NE_REPO_BRANCH:-main}"
+# Production branch (carries the NeuralEDGE overlay). `main` is pure upstream
+# Hermes pinned to UPSTREAM_TAG and contains no NE files. Override with
+# NE_REPO_BRANCH for testing (e.g. merge-test before promoting to neuraledge).
+REPO_BRANCH="${NE_REPO_BRANCH:-neuraledge}"
 INSTALL_DIR="${NE_INSTALL_DIR:-/opt/neuraledge-agent}"
 STATE_DIR="${HOME}/.hermes"
 COMPOSE_FILES="-f docker-compose.yml -f docker-compose.neuraledge.yml"
