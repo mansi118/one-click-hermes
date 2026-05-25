@@ -22,8 +22,8 @@ multi-platform gateway, cron, MCP — and adds five upstream-blessed extensions:
 - **SOUL.md** (`~/.hermes/SOUL.md`) — Neural's persona: voice, identity, conduct.
 - **Skills** (`skills/neuraledge/<slug>/SKILL.md` × 4) — company, NEOS operations,
   deploy runbook, engagement workflow.
-- **CORTEX-PALACE MCP bridge** (`~/.hermes/mcp.json` + `cortex-mcp` sidecar) — durable
-  institutional memory via NEOS Convex / FalkorDB.
+- **CORTEX-PALACE MCP bridge** (registered under `mcp_servers:` in `~/.hermes/config.yaml`,
+  served by the `cortex-mcp` sidecar) — durable institutional memory via NEOS Convex / FalkorDB.
 - **One-click installer** — `curl | bash` on a fresh Ubuntu VPS.
 
 Zero core patches to upstream. All five extensions are official extension points; upstream
@@ -44,7 +44,7 @@ The installer is idempotent and walks the operator through:
 
 1. Docker + swap
 2. Fetch this repo + upstream Hermes pinned to `v2026.5.16`
-3. Seed `~/.hermes/{config.yaml, SOUL.md, mcp.json, skins/neuraledge.yaml, skills/neuraledge/, .env}`
+3. Seed `~/.hermes/{config.yaml, SOUL.md, skins/neuraledge.yaml, skills/neuraledge/, .env}`
 4. Build the `hermes-agent` (upstream) + `cortex-mcp` (NeuralEDGE) images
 5. Hermes setup wizard (model + Telegram pairing)
 6. Optional CORTEX-PALACE secrets (stub mode is the default)
@@ -97,7 +97,7 @@ See `docs/RUNBOOK.md` for the full operations guide.
                           │     │      │  127.0.0.1:9119  │                      │
                           │     │      └──────────────────┘                      │
                           │     └─ shared volume: ~/.hermes:/opt/data            │
-                          │        (config.yaml, SOUL.md, mcp.json, skins/,       │
+                          │        (config.yaml — incl. mcp_servers, SOUL.md,     │
                           │         skills/, sessions/, .env)                     │
                           └─────────────────────────────────────────────────────┘
 ```
@@ -120,7 +120,7 @@ Routing rule: see `skills/neuraledge/neos-operations/SKILL.md`.
 ├── neuraledge/
 │   ├── branding/SOUL.md    Neural's persona (seeded to ~/.hermes/SOUL.md)
 │   ├── skins/              NeuralEDGE Skin (single YAML; seeded to ~/.hermes/skins/)
-│   ├── config/             config.defaults.yaml + mcp.json + .env.template
+│   ├── config/             config.defaults.yaml + .env.template
 │   ├── install.sh          One-click installer (idempotent, 10 steps)
 │   └── mcp/cortex-palace/  CORTEX-PALACE MCP bridge (FastMCP, Python, stub-first)
 ├── skills/neuraledge/      4 seed skills, each as <slug>/SKILL.md

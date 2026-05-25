@@ -14,7 +14,7 @@ form — keep them in sync when either changes.
 | `~/.hermes/config.yaml` | Active Hermes config (seeded from `neuraledge/config/config.defaults.yaml`) |
 | `~/.hermes/.env` | Secrets, mode `600` (seeded from `.env.template`) |
 | `~/.hermes/SOUL.md` | Neural's persona (seeded from `neuraledge/branding/SOUL.md`) |
-| `~/.hermes/mcp.json` | MCP server registry (cortex-mcp registered here) |
+| `~/.hermes/config.yaml` *(`mcp_servers:` block)* | MCP server registry — cortex-mcp registered here |
 | `~/.hermes/skins/neuraledge.yaml` | Active skin (seeded from `neuraledge/skins/`) |
 | `~/.hermes/skills/neuraledge/<slug>/SKILL.md` | NeuralEDGE seed skills (4 of them) |
 | `~/.hermes/skills/` | Plus skills learned at runtime |

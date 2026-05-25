@@ -111,8 +111,8 @@ make up
 make doctor
 ```
 
-State in `~/.hermes/` is untouched by upgrades — config, SOUL.md, memory, and mcp.json
-all survive.
+State in `~/.hermes/` is untouched by upgrades — config.yaml (with its `mcp_servers:`
+block), SOUL.md, sessions, and the rest of operator state all survive.
 
 ---
 

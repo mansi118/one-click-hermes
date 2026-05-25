@@ -59,8 +59,8 @@ result: scaffold rewritten, **zero core patches needed**.
 - [x] **Plugin discovery dir** — Not applicable; we don't ship a plugin anymore.
 - [x] **Config keys** — Real schema is `model:` (with `default`/`provider`/`base_url`),
   `terminal:`, `display:` (with `skin:`), `skills:` (with `disabled:`/`platform_disabled:`,
-  *opt-out* not opt-in), `gateway:`, `worktree:`. **MCP servers live in a separate
-  `~/.hermes/mcp.json`**, not in `config.yaml`. All updated in
+  *opt-out* not opt-in), `gateway:`, `worktree:`, **`mcp_servers:`** (snake_case;
+  see the dedicated entry below). All updated in
   `neuraledge/config/config.defaults.yaml`.
 - [x] **CLI subcommands** — `hermes doctor`, `hermes setup`, `hermes model` all real.
   `hermes skills` is **interactive** (curses); subcommands: `tap`, `config`. No
@@ -73,10 +73,14 @@ result: scaffold rewritten, **zero core patches needed**.
   overlay: adds only `cortex-mcp` (host-net, bound to `127.0.0.1:8765`) plus a
   `depends_on` link. Usage: `docker compose -f docker-compose.yml -f
   docker-compose.neuraledge.yml up -d`.
-- [x] **`mcp.json` format** — Standard MCP JSON: `{"mcpServers": {"<name>": {"transport":
-  "sse", "url": "...", ...}}}`. Distribution-owned file at `~/.hermes/mcp.json`. Schema
-  verified at doctor-time (the one residual uncertainty — Hermes's exact key naming may
-  vary by 1-2 fields; fix is a 1-line config edit if so).
+- [x] **MCP server registration** — Verified against `hermes_cli/mcp_config.py:8` and
+  `cli-config.yaml.example:777`. **For fork-mode users, MCP servers live in
+  `~/.hermes/config.yaml` under `mcp_servers:` (snake_case)**, NOT in a separate
+  `mcp.json`. Server-entry shape: `url + transport: sse` for SSE servers (per
+  `tools/mcp_tool.py:34`). Our `cortex-mcp` entry is folded into
+  `neuraledge/config/config.defaults.yaml`. (The standalone `~/.hermes/mcp.json` is a
+  `profile_distribution` artefact — relevant only for the v2 distribution path; see
+  Design §11.)
 
 ---
 

@@ -27,7 +27,7 @@ The NeuralEDGE additions live in:
 - `neuraledge/branding/SOUL.md`
 - `neuraledge/skins/neuraledge.yaml`
 - `neuraledge/mcp/cortex-palace/`
-- `neuraledge/config/{config.defaults.yaml, mcp.json, .env.template}`
+- `neuraledge/config/{config.defaults.yaml, .env.template}`
 - `neuraledge/install.sh`
 - `skills/neuraledge/<slug>/SKILL.md` (4 skills)
 - `web/themes/neuraledge.css`

@@ -34,7 +34,7 @@ installed host is safe and resumes from the first incomplete step.
 | `~/.hermes/config.yaml` | Operator config (real Hermes schema: `model:`, `terminal:`, `skills.disabled:`, `display.skin:`, …) |
 | `~/.hermes/.env` | Secrets (mode `600`) |
 | `~/.hermes/SOUL.md` | Neural's persona (seeded from `neuraledge/branding/SOUL.md`) |
-| `~/.hermes/mcp.json` | MCP server registration — cortex-mcp lives here |
+| `~/.hermes/config.yaml` *(`mcp_servers:`)* | MCP server registration — cortex-mcp lives here |
 | `~/.hermes/skins/neuraledge.yaml` | NeuralEDGE skin (banner, colors, branding strings) |
 | `~/.hermes/skills/` | Learned skills (seed skills ship in repo `skills/neuraledge/`) |
 | `~/.hermes/sessions/` | Tier-1 session memory + Honcho user model |

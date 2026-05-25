@@ -6,7 +6,7 @@
 upstream-blessed Skin system (`hermes_cli/skin_engine.py`). Aligned config keys to
 real Hermes schema (`model:`, `terminal:`, `skills.disabled:`, `display.skin:`).
 Moved persona to `SOUL.md` per Hermes conventions. MCP server registration moved to
-`~/.hermes/mcp.json`. Skills restructured to `<slug>/SKILL.md` directories.
+`mcp_servers:` in `~/.hermes/config.yaml`. Skills restructured to `<slug>/SKILL.md` directories.
 docker-compose.neuraledge.yml is now a true overlay on upstream's compose.
 **Net effect: zero core patches.** See §11 (NEW) for the v2 path — ship as a Hermes
 distribution rather than a fork.
@@ -69,7 +69,7 @@ seam between them:
   agent/        gateway/                   neuraledge/branding/SOUL.md
   providers/    hermes_*.py                neuraledge/skins/neuraledge.yaml
   cli.py        tools/  cron/              neuraledge/mcp/cortex-palace/
-  hermes_cli/   skills/{apple,...}/        neuraledge/config/{config.defaults.yaml, mcp.json, .env.template}
+  hermes_cli/   skills/{apple,...}/        neuraledge/config/{config.defaults.yaml, .env.template}
   Dockerfile  docker-compose.yml           neuraledge/install.sh
   plugins/{memory,web,…}/                  skills/neuraledge/<slug>/SKILL.md  × 4
                                            docker-compose.neuraledge.yml   (overlay)
@@ -85,10 +85,15 @@ seam between them:
    `DEFAULT_SOUL_MD`; the installer overrides with the NeuralEDGE soul.
 3. **Skills** (`skills/<category>/<slug>/SKILL.md`) — directory-per-skill, YAML frontmatter,
    tags under `metadata.hermes.tags`. Auto-loaded; opt-out via `skills.disabled:` in config.
-4. **mcp.json** (`~/.hermes/mcp.json`) — MCP server registry. CORTEX-PALACE bridge lives here.
-   Distribution-owned file.
+4. **MCP servers** — `mcp_servers:` block in `~/.hermes/config.yaml`. Server-entry
+   schema: `command/args/env` (stdio) or `url` (HTTP) or `url + transport: sse` (SSE).
+   CORTEX-PALACE bridge lives here. *Verified against `hermes_cli/mcp_config.py:8`.*
 5. **Config layering** (`~/.hermes/config.yaml`) — real Hermes schema:
-   `model:`, `terminal:`, `display:`, `skills:`, `gateway:`. Nothing hardcoded.
+   `model:`, `terminal:`, `display:`, `skills:`, `gateway:`, `mcp_servers:`. Nothing hardcoded.
+
+> **Note on `mcp.json`:** Upstream also has a standalone `~/.hermes/mcp.json` concept,
+> but it's part of the `profile_distribution` mechanism (v2 path; see §11). For the
+> fork model we ship today, `mcp_servers:` in `config.yaml` is the right place.
 
 Anything that cannot be done through these 5 is a **core patch** — minimal, isolated, logged
 in `NEURALEDGE_PATCHES.md`. **Target: 0 core patches.** All five extension points are
@@ -292,8 +297,7 @@ distribution-owned files seeded by the installer; secrets live separately in `.e
 
 | File | Seeded to | Role |
 |---|---|---|
-| `config.defaults.yaml` | `~/.hermes/config.yaml` | `model:` (provider+default), `terminal:` (docker backend), `display.skin: neuraledge`, `skills.disabled: []`, `gateway:`, `worktree: false`. **No** `personality:` / `plugins:` / `mcp_servers:` keys — those aren't real. |
-| `mcp.json` | `~/.hermes/mcp.json` | MCP server registry. Contains `cortex-mcp` (SSE transport, `http://127.0.0.1:8765/sse`). |
+| `config.defaults.yaml` | `~/.hermes/config.yaml` | `model:` (provider+default), `terminal:` (docker backend), `display.skin: neuraledge`, `skills.disabled: []`, `gateway:`, `worktree: false`, **`mcp_servers:`** (with `cortex-mcp` SSE entry). Drops `personality:` / `plugins:` (those keys don't exist upstream). |
 | `.env.template` | `~/.hermes/.env` | Secrets: `OPENROUTER_API_KEY`, `TELEGRAM_BOT_TOKEN`, `CORTEX_*`, `N8N_WEBHOOK_URL`, `HERMES_UID/GID`. |
 
 The installer copies each file **only if absent** in `~/.hermes` — operator overrides are

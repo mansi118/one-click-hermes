@@ -6,7 +6,7 @@
 **v1.1 change vs v1:** rewritten to match the verified upstream contracts
 (`v0.14.0` / `v2026.5.16`). Branding plugin replaced by Skin; persona renamed to
 SOUL.md; skills restructured to `<slug>/SKILL.md`; compose is now a true overlay;
-mcp.json registers cortex-mcp. **Target: 0 core patches.**
+`mcp_servers:` in config.yaml registers cortex-mcp. **Target: 0 core patches.**
 
 Build top-down. Each phase has a single owner, ends with a verifiable check, and is safe to
 ship even if later phases are deferred.
@@ -150,10 +150,13 @@ SOUL, the skills, and the cortex-mcp server. Real schema, no guessed keys.
    - `skills.disabled: []` (opt-out model)
    - `gateway:`, `worktree: false`
    - **No** `personality:` / `plugins:` / `mcp_servers:` (those don't exist).
-2. `neuraledge/config/mcp.json`:
-   ```json
-   { "mcpServers": { "cortex-mcp": { "transport": "sse",
-                                      "url": "http://127.0.0.1:8765/sse" } } }
+2. *(no standalone mcp.json)* — MCP servers go in `config.defaults.yaml` under
+   `mcp_servers:` (snake_case, verified against `hermes_cli/mcp_config.py:8`):
+   ```yaml
+   mcp_servers:
+     cortex-mcp:
+       url: "http://127.0.0.1:8765/sse"
+       transport: sse
    ```
 3. `neuraledge/config/.env.template` — secrets: LLM key, Telegram token, CORTEX_*,
    N8N_WEBHOOK_URL, HERMES_UID/GID.
@@ -178,8 +181,9 @@ compose extended by ours.
    - No reimplementation of upstream's `gateway` / `dashboard` services.
 2. `neuraledge/install.sh` — 10 idempotent steps per Design §4.2:
    `preflight`, `install_docker`, `ensure_swap`, `fetch_repo` (now also merges upstream
-   tag, auto-resolves the 4 override conflicts), `init_state` (seeds SOUL.md, mcp.json,
-   skin, skills, config, env), `build_images`, `run_setup_wizard`, `prompt_secrets`,
+   tag, auto-resolves the 4 override conflicts), `init_state` (seeds SOUL.md,
+   skin, skills, config including `mcp_servers:`, env), `build_images`,
+   `run_setup_wizard`, `prompt_secrets`,
    `launch`, `verify_and_report`.
 3. `Makefile` — `make {install,up,down,logs,doctor,backup,sync-upstream,...}`. All
    compose calls use the overlay (`-f docker-compose.yml -f docker-compose.neuraledge.yml`).

@@ -5,12 +5,13 @@
 #   curl -fsSL https://get.neuraledge.in/agent | bash
 #
 # Idempotent: every step is safe to re-run. The script never clobbers an
-# existing ~/.hermes/config.yaml, SOUL.md, mcp.json, or .env — it only seeds
-# them when absent.
+# existing ~/.hermes/config.yaml, SOUL.md, or .env — it only seeds them when
+# absent.
 #
 # This installer is an overlay on stock Hermes Agent v2026.5.16. It does NOT
-# patch upstream code — it lays the NeuralEDGE distribution (SOUL.md, skin,
-# skills, mcp.json) into ~/.hermes alongside the upstream container.
+# patch upstream code — it lays the NeuralEDGE distribution (config.yaml with
+# mcp_servers, SOUL.md, skin, skills) into ~/.hermes alongside the upstream
+# container.
 
 set -euo pipefail
 
@@ -218,14 +219,8 @@ step_state() {
     ok "seeded SOUL.md (Neural persona)"
   fi
 
-  # mcp.json — CORTEX-PALACE MCP server registration
-  if [[ -f "$STATE_DIR/mcp.json" ]]; then
-    ok "mcp.json present — not overwriting"
-  else
-    cp "$INSTALL_DIR/neuraledge/config/mcp.json" "$STATE_DIR/mcp.json"
-    chmod 600 "$STATE_DIR/mcp.json"
-    ok "seeded mcp.json (cortex-mcp server)"
-  fi
+  # MCP servers (cortex-mcp) live inside ~/.hermes/config.yaml under
+  # `mcp_servers:` — already seeded above. Nothing to do here.
 
   # skins/neuraledge.yaml
   cp "$INSTALL_DIR/neuraledge/skins/neuraledge.yaml" "$STATE_DIR/skins/neuraledge.yaml"

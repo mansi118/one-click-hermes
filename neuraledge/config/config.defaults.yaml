@@ -3,7 +3,9 @@
 # Schema reference: cli-config.yaml.example in upstream Hermes Agent (v2026.5.16).
 #
 # Secrets live in ~/.hermes/.env, not here.
-# MCP servers live in ~/.hermes/mcp.json (seeded from neuraledge/config/mcp.json).
+# MCP servers live in this file under `mcp_servers:` (verified against
+#   hermes_cli/mcp_config.py:8 — "keeps configuration in ~/.hermes/config.yaml
+#   under the ``mcp_servers`` key").
 # Persona lives in ~/.hermes/SOUL.md (seeded from neuraledge/branding/SOUL.md).
 # Skin lives in ~/.hermes/skins/neuraledge.yaml.
 
@@ -50,6 +52,17 @@ skills:
 # Dashboard binds to 127.0.0.1 — reach via SSH tunnel only.
 gateway:
   # proxy_url: ""   # leave unset; we run the agent in-process
+
+# ─── MCP servers ────────────────────────────────────────────────────────────
+# Server entry shape (per tools/mcp_tool.py):
+#   stdio servers:  command + args + env
+#   HTTP servers:   url
+#   SSE servers:    url + transport: sse
+# CORTEX-PALACE bridge: SSE on 127.0.0.1:8765 (cortex-mcp container, host-net).
+mcp_servers:
+  cortex-mcp:
+    url: "http://127.0.0.1:8765/sse"
+    transport: sse
 
 # ─── Worktree isolation ─────────────────────────────────────────────────────
 # Off by default. Turn on if multiple concurrent CLI sessions need their own

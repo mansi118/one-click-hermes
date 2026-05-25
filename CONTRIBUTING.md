@@ -24,7 +24,7 @@ If you find yourself wanting to edit something in the upstream zone, **stop and 
 1. A change to the Skin YAML (`neuraledge/skins/neuraledge.yaml`) — colors, banner, strings.
 2. A change to `SOUL.md` — Neural's voice/identity/conduct.
 3. A new skill under `skills/neuraledge/<slug>/SKILL.md`.
-4. A new entry in `neuraledge/config/mcp.json` for an additional MCP server.
+4. A new entry in `neuraledge/config/config.defaults.yaml` under `mcp_servers:` for an additional MCP server.
 5. A config knob in `neuraledge/config/config.defaults.yaml` (real Hermes schema).
 
 Only if none of those five can carry it — log it in `NEURALEDGE_PATCHES.md` and add the
@@ -101,7 +101,7 @@ Find the offending commit and move the change into the NeuralEDGE zone.
 | Tweak Neural's persona (voice, identity, boundaries) | Edit `neuraledge/branding/SOUL.md` |
 | Teach Neural a procedure or domain fact | New skill: `skills/neuraledge/<slug>/SKILL.md` |
 | Add a CORTEX-PALACE tool or change a tool shape | `neuraledge/mcp/cortex-palace/cortex_mcp/` + bump version + update `neos-operations` skill |
-| Wire in a new external MCP server | Add entry to `neuraledge/config/mcp.json` |
+| Wire in a new external MCP server | Add entry to `neuraledge/config/config.defaults.yaml` under `mcp_servers:` |
 | Change a Hermes config default | `neuraledge/config/config.defaults.yaml` (real schema only) |
 | Change the install flow | `neuraledge/install.sh` |
 | Add a make target | `Makefile` |
